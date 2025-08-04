@@ -33,29 +33,33 @@ const productSchema = new mongoose.Schema(
     },
     size: {
       type: String, // Single size, not an array
-    //  enum: ["S", "M", "L", "XL", "XXL", "Free", "Custom", "OneSize"],
+      //  enum: ["S", "M", "L", "XL", "XXL", "Free", "Custom", "OneSize"],
       default: "Free", // Default size
       required: true,
     },
     discount: {
       type: Number,
-      default: 0
+      default: 0,
     },
     category: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "ProductCategory"
+      ref: "ProductCategory",
     },
-    
+
     addedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-    }
+    },
   },
   {
     timestamps: true, // Adds createdAt and updatedAt timestamps
   }
 );
+productSchema.index({
+  productName: "text",
+  description: "text",
+});
 
 const Product = mongoose.model("Product", productSchema);
 
