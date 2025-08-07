@@ -31,12 +31,20 @@ const productSchema = new mongoose.Schema(
       min: [0, "Price must be a positive value"],
       default: 0,
     },
-    size: {
-      type: String, // Single size, not an array
-      //  enum: ["S", "M", "L", "XL", "XXL", "Free", "Custom", "OneSize"],
-      default: "Free", // Default size
-      required: true,
-    },
+    size: [
+      {
+        sizes: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+        price: {
+          type: Number,
+          required: true,
+          min: [0, "Price must be a positive value"],
+        },
+      },
+    ],
     discount: {
       type: Number,
       default: 0,
