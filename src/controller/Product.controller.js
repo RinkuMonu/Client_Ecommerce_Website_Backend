@@ -69,10 +69,43 @@ export const createProduct = async (req, res) => {
 
     const imageArray =
       req.files?.map((file) => `/uploads/${file.filename}`) || [];
-    const productSize = size || "M";
+
+    let parsedSizes;
+    if (typeof size === "string") {
+      try {
+        parsedSizes = JSON.parse(size);
+      } catch (err) {
+        return res
+          .status(400)
+          .json({ message: "Invalid size format. Must be valid JSON array." });
+      }
+    } else {
+      parsedSizes = size;
+    }
+
+    // Validation
+    if (!Array.isArray(parsedSizes) || parsedSizes.length === 0) {
+      return res
+        .status(400)
+        .json({ message: "At least one size with price is required." });
+    }
+
+    for (const item of parsedSizes) {
+      if (
+        !item.sizes ||
+        typeof item.sizes !== "string" ||
+        item.price == null ||
+        item.price < 0
+      ) {
+        return res.status(400).json({
+          message:
+            "Each size entry must have a valid 'sizes' string and a non-negative 'price'.",
+        });
+      }
+    }
 
     console.log("Processed images:", imageArray);
-    console.log("Product size:", productSize);
+    console.log("Product size:", parsedSizes);
     console.log("Price:", price, "Actual Price:", actualPrice);
 
     if (actualPrice < 0 || actualPrice > price) {
@@ -91,7 +124,7 @@ export const createProduct = async (req, res) => {
       actualPrice: Number(actualPrice),
       category,
       description,
-      size: productSize,
+      size: parsedSizes,
       discount: Number(discount),
       addedBy: req.user?.id?.toString(),
     });
@@ -154,6 +187,7 @@ export const getProducts = async (req, res) => {
       sortBy = "createdAt",
       sortOrder = "desc",
       page = 1,
+      search,
       limit = 100,
       newArrival, // ✅ added
     } = req.query;
@@ -185,14 +219,32 @@ export const getProducts = async (req, res) => {
     pipeline.push({ $unwind: "$category" });
 
     // Match by category name (case-insensitive)
-    if (category) {
+    if (search) {
       pipeline.push({
         $match: {
-          "category.name": {
-            $regex: new RegExp("^" + category + "$", "i"), // case-insensitive exact match
+          productName: {
+            $regex: new RegExp(search, "i"), // case-insensitive exact match
           },
         },
       });
+    }
+    // Match by category name (case-insensitive)
+    if (category) {
+      if (mongoose.Types.ObjectId.isValid(category)) {
+        pipeline.push({
+          $match: {
+            "category._id": new mongoose.Types.ObjectId(category),
+          },
+        });
+      } else {
+        pipeline.push({
+          $match: {
+            "category.productName": {
+              $regex: new RegExp(category, "i"), // case-insensitive exact match
+            },
+          },
+        });
+      }
     }
 
     // Filter by price range
@@ -409,10 +461,10 @@ export const getProductDetail = async (req, res) => {
 };
 
 export const updateProduct = async (req, res) => {
+  console.log(req);
   try {
     const {
       productName,
-      images,
       price,
       actualPrice,
       discount,
@@ -420,8 +472,43 @@ export const updateProduct = async (req, res) => {
       description,
       size,
     } = req.body;
-    const imageArray = Array.isArray(images) ? images : [images];
-    const productSize = size || "M";
+
+    const imageArray =
+      req.files?.map((file) => `/uploads/${file.filename}`) || [];
+
+    let parsedSizes;
+    if (typeof size === "string") {
+      try {
+        parsedSizes = JSON.parse(size);
+      } catch (err) {
+        return res
+          .status(400)
+          .json({ message: "Invalid size format. Must be valid JSON array." });
+      }
+    } else {
+      parsedSizes = size;
+    }
+
+    if (!Array.isArray(parsedSizes) || parsedSizes.length === 0) {
+      return res
+        .status(400)
+        .json({ message: "At least one size with price is required." });
+    }
+
+    for (const item of parsedSizes) {
+      if (
+        !item.sizes ||
+        typeof item.sizes !== "string" ||
+        item.price == null ||
+        item.price < 0
+      ) {
+        return res.status(400).json({
+          message:
+            "Each size entry must have a valid 'sizes' string and a non-negative 'price'.",
+        });
+      }
+    }
+
     if (actualPrice < 0 || actualPrice > price) {
       return res.status(400).json({
         message:
@@ -437,7 +524,7 @@ export const updateProduct = async (req, res) => {
         actualPrice: actualPrice || 0,
         category,
         description,
-        size: productSize,
+        size: parsedSizes,
         discount,
       },
       { new: true }

@@ -17,7 +17,7 @@ const productRoutes = express.Router();
 productRoutes.post(
   "/products",
   isAdmin,
-  upload.array("images", 5), // up to 5 images
+  upload.array("images", 5),
   createProduct
 );
 
@@ -26,7 +26,12 @@ productRoutes.get("/getproduct/:id", getProductDetail);
 productRoutes.get("/search", searchProducts);
 
 productRoutes.delete("/delete/:id", isAdmin, deleteProduct);
-productRoutes.put("/products/:id", isAdmin, updateProduct);
+productRoutes.put(
+  "/products/:id",
+  upload.array("images", 5),
+  isAdmin,
+  updateProduct
+);
 productRoutes.post("/addmany", createMultipleProducts);
 
 export default productRoutes;
