@@ -239,7 +239,7 @@ export const getProducts = async (req, res) => {
       } else {
         pipeline.push({
           $match: {
-            "category.productName": {
+            "category.name": {
               $regex: new RegExp(category, "i"), // case-insensitive exact match
             },
           },
