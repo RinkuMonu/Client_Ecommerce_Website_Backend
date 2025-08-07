@@ -38,6 +38,7 @@ app.use(
   cors({
     origin: [
       "http://localhost:5174",
+      "http://localhost:4002",
       "https://yourfrontenddomain.com",
       "https://jajamblockprints.com",
       "https://admin.jajamblockprints.com",

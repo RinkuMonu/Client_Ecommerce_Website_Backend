@@ -461,7 +461,6 @@ export const getProductDetail = async (req, res) => {
 };
 
 export const updateProduct = async (req, res) => {
-  console.log(req);
   try {
     const {
       productName,
@@ -473,8 +472,16 @@ export const updateProduct = async (req, res) => {
       size,
     } = req.body;
 
+    const existingProduct = await Product.findById(req.params.id);
+    if (!existingProduct) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
     const imageArray =
-      req.files?.map((file) => `/uploads/${file.filename}`) || [];
+      req.files && req.files.length > 0
+        ? req.files.map((file) => `/uploads/${file.filename}`)
+        : existingProduct.images;
+
 
     let parsedSizes;
     if (typeof size === "string") {
