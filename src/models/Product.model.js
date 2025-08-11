@@ -31,6 +31,16 @@ const productSchema = new mongoose.Schema(
       min: [0, "Price must be a positive value"],
       default: 0,
     },
+    material: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    stock: {
+      type: Number,
+      required: true,
+      trim: true,
+    },
     size: [
       {
         sizes: {

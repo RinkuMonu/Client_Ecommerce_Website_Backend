@@ -65,6 +65,8 @@ export const createProduct = async (req, res) => {
       category,
       description,
       size,
+      material,
+      stock,
     } = req.body;
 
     const imageArray =
@@ -125,6 +127,8 @@ export const createProduct = async (req, res) => {
       category,
       description,
       size: parsedSizes,
+      material,
+      stock,
       discount: Number(discount),
       addedBy: req.user?.id?.toString(),
     });
@@ -190,6 +194,7 @@ export const getProducts = async (req, res) => {
       search,
       limit = 100,
       newArrival, // ✅ added
+      material,
     } = req.query;
 
     if (!referenceWebsite) {
@@ -228,6 +233,14 @@ export const getProducts = async (req, res) => {
         },
       });
     }
+    if (material) {
+      pipeline.push({
+        $match: {
+          material: { $regex: new RegExp(material, "i") },
+        },
+      });
+    }
+
     // Match by category name (case-insensitive)
     if (category) {
       if (mongoose.Types.ObjectId.isValid(category)) {
@@ -470,6 +483,8 @@ export const updateProduct = async (req, res) => {
       category,
       description,
       size,
+      material,
+      stock,
     } = req.body;
 
     const existingProduct = await Product.findById(req.params.id);
@@ -481,7 +496,6 @@ export const updateProduct = async (req, res) => {
       req.files && req.files.length > 0
         ? req.files.map((file) => `/uploads/${file.filename}`)
         : existingProduct.images;
-
 
     let parsedSizes;
     if (typeof size === "string") {
@@ -533,6 +547,8 @@ export const updateProduct = async (req, res) => {
         description,
         size: parsedSizes,
         discount,
+        material,
+        stock,
       },
       { new: true }
     );
