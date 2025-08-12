@@ -86,11 +86,11 @@ export const createProduct = async (req, res) => {
     }
 
     // Validation
-    if (!Array.isArray(parsedSizes) || parsedSizes.length === 0) {
-      return res
-        .status(400)
-        .json({ message: "At least one size with price is required." });
-    }
+    // if (!Array.isArray(parsedSizes) || parsedSizes.length === 0) {
+    //   return res
+    //     .status(400)
+    //     .json({ message: "At least one size with price is required." });
+    // }
 
     for (const item of parsedSizes) {
       if (
