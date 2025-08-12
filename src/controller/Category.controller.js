@@ -46,6 +46,68 @@ export const createCategory = async (req, res) => {
   }
 };
 
+
+
+export const createMainCategory = async (req, res) => {
+  const { subcategory } = req.body;
+
+  if (!subcategory) {
+    return res.status(400).json({ message: "Category name is required." });
+  }
+
+  try {
+    // Check if category already exists
+    const existingCategory = await ProductCategory.findOne({
+      subcategory: subcategory,
+    });
+    if (existingCategory) {
+      return res.status(409).json({ message: "Category already exists." });
+    }
+
+    // Create new category document
+    const newCategory = new ProductCategory({ subcategory: subcategory });
+    await newCategory.save();
+
+    return res.status(201).json({
+      message: "Category created successfully.",
+      category: newCategory,
+    });
+  } catch (error) {
+    console.error("Error creating category:", error);
+    return res
+      .status(500)
+      .json({ message: "Server error while creating category." });
+  }
+};
+
+
+export const getMainCategory = async (_, res) => {
+  try {
+    const categories = await ProductCategory.aggregate([
+      {
+        $group: {
+          _id: "$subcategory",
+          id: { $first: "$_id" },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          subcategory: "$_id",
+          id: 1,
+        },
+      },
+    ]);
+
+    res.status(200).json(categories);
+  } catch (error) {
+    console.error("Error fetching subcategories with ids:", error);
+    res
+      .status(500)
+      .json({ message: "Server error fetching subcategories with ids" });
+  }
+};
+
 // Get all product categories
 export const getCategories = async (req, res) => {
   try {
@@ -81,7 +143,7 @@ export const updateCategory = async (req, res) => {
     const { name, description, subcategory } = req.body;
     const category = await ProductCategory.findByIdAndUpdate(
       id,
-      { name, description,subcategory },
+      { name, description, subcategory },
       { new: true, runValidators: true }
     );
     if (!category) {
