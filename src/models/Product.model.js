@@ -23,6 +23,7 @@ const productSchema = new mongoose.Schema(
     },
     price: {
       type: Number,
+      required: true,
       min: [0, "Price must be a positive value"],
     },
     actualPrice: {
@@ -43,12 +44,10 @@ const productSchema = new mongoose.Schema(
       {
         sizes: {
           type: String,
-          required: true,
           trim: true,
         },
         price: {
           type: Number,
-          required: true,
           min: [0, "Price must be a positive value"],
         },
       },
