@@ -7,6 +7,7 @@ import {
   deleteCategory,
   createMainCategory,
   getMainCategory,
+  updateMainCategory,
 } from "../controller/Category.controller.js";
 import { isAdmin } from "../middleware/isAdmin.js";
 import upload from "../middleware/multerConfig.js";
@@ -17,6 +18,7 @@ router.post("/", upload.array("images", 5), isAdmin, createCategory);
 
 router.post("/createMainCategory", createMainCategory);
 router.get("/getMainCategory", getMainCategory);
+router.post("/updateMainCategory", updateMainCategory);
 
 router.get("/", getCategories);
 router.get("/:id", isAdmin, getCategoryById);
