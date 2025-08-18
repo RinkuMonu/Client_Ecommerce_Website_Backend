@@ -4,8 +4,8 @@ const productCategorySchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      unique: true,
       trim: true,
+      unique: false,
     },
     image: {
       type: String,

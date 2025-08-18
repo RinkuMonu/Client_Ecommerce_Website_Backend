@@ -46,8 +46,6 @@ export const createCategory = async (req, res) => {
   }
 };
 
-
-
 export const createMainCategory = async (req, res) => {
   const { subcategory } = req.body;
 
@@ -73,13 +71,16 @@ export const createMainCategory = async (req, res) => {
       category: newCategory,
     });
   } catch (error) {
+    // Mongoose validation error
+    if (error.name === "ValidationError") {
+      return res.status(400).json({ message: error.message });
+    }
     console.error("Error creating category:", error);
     return res
       .status(500)
       .json({ message: "Server error while creating category." });
   }
 };
-
 
 export const getMainCategory = async (_, res) => {
   try {
@@ -105,6 +106,51 @@ export const getMainCategory = async (_, res) => {
     res
       .status(500)
       .json({ message: "Server error fetching subcategories with ids" });
+  }
+};
+
+export const updateMainCategory = async (req, res) => {
+  const { id, subcategory } = req.body;
+  console.log(id);
+
+  if (!id) {
+    return res.status(400).json({ message: "Category ID is required." });
+  }
+
+  if (!subcategory) {
+    return res.status(400).json({ message: "Category name is required." });
+  }
+
+  try {
+    // Check if another category already has this subcategory
+    const existingCategory = await ProductCategory.findOne({
+      subcategory,
+      _id: { $ne: id }, // exclude the current category from duplicate check
+    });
+
+    if (existingCategory) {
+      return res.status(409).json({ message: "Category already exists." });
+    }
+
+    const updatedCategory = await ProductCategory.findByIdAndUpdate(
+      id,
+      { subcategory },
+      { new: true }
+    );
+
+    if (!updatedCategory) {
+      return res.status(404).json({ message: "Category not found." });
+    }
+
+    return res.status(200).json({
+      message: "Category updated successfully.",
+      category: updatedCategory,
+    });
+  } catch (error) {
+    console.error("Error updating category:", error);
+    return res
+      .status(500)
+      .json({ message: "Server error while updating category." });
   }
 };
 
