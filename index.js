@@ -41,6 +41,7 @@ app.use(
       "http://localhost:4002",
       "https://yourfrontenddomain.com",
       "https://jajamblockprints.com",
+      "https://www.jajamblockprints.com",
       "https://admin.jajamblockprints.com",
       "https://spiral.fashion",
       "https://www.spiral.fashion"
