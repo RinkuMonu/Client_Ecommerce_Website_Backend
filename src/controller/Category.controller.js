@@ -187,22 +187,42 @@ export const updateCategory = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, description, subcategory } = req.body;
-    const category = await ProductCategory.findByIdAndUpdate(
-      id,
-      { name, description, subcategory },
-      { new: true, runValidators: true }
-    );
-    if (!category) {
+
+    // check new uploaded images
+    const imageArray =
+      req.files?.map((file) => `/uploads/${file.filename}`) || [];
+
+    // get old category
+    const existingCategory = await ProductCategory.findById(id);
+    if (!existingCategory) {
       return res.status(404).json({ message: "Category not found." });
     }
 
-    res
-      .status(200)
-      .json({ message: "Category updated successfully.", category });
+    // ✅ use new images if available, otherwise keep old ones
+    const updatedImages =
+      imageArray.length > 0 ? imageArray : existingCategory.image;
+
+    // update category
+    const category = await ProductCategory.findByIdAndUpdate(
+      id,
+      {
+        name,
+        description,
+        subcategory,
+        image: updatedImages,
+      },
+      { new: true, runValidators: true }
+    );
+
+    res.status(200).json({
+      message: "Category updated successfully.",
+      category,
+    });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Failed to update category.", error: error.message });
+    res.status(500).json({
+      message: "Failed to update category.",
+      error: error.message,
+    });
   }
 };
 
