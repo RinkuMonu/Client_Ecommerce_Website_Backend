@@ -187,9 +187,12 @@ export const updateCategory = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, description, subcategory } = req.body;
+  
 
     // check new uploaded images
     const imageArray = `/uploads/${req.file.filename}`
+
+    
 
     // get old category
     const existingCategory = await ProductCategory.findById(id);

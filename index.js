@@ -20,6 +20,8 @@ import vendorRoutes from "./src/routes/vendor.routes.js";
 import { isAdmin } from "./src/middleware/isAdmin.js";
 import bannerRoutes from "./src/routes/banner.rotes.js";
 import review from "./src/routes/review.route.js";
+import couponRoutes from "./src/routes/coupon.router.js";
+import salesRouter from "./src/routes/sales.router.js";
 
 dotenv.config();
 
@@ -67,6 +69,8 @@ app.use("/api/sendreview", review);
 app.post("/api/phonepe-payment", phonePeController);
 app.get("/api/dashboard", isAdmin, getDashboardData);
 app.use("/api", vendorRoutes);
+app.use('/api/coupons', couponRoutes);
+app.use("/api/salesOverview", salesRouter);
 
 // 67888fb90e1c6b678401302d
 

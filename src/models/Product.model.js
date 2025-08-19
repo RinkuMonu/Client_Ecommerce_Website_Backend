@@ -60,6 +60,10 @@ const productSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "ProductCategory",
     },
+    coupon: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Coupon",
+    },
 
     addedBy: {
       type: mongoose.Schema.Types.ObjectId,

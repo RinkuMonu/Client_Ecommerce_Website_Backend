@@ -1,3 +1,4 @@
+import CouponModel from "../models/Coupon.model.js";
 import Product from "../models/Product.model.js";
 import mongoose from "mongoose";
 
@@ -223,6 +224,24 @@ export const getProducts = async (req, res) => {
     // Flatten the joined category array
     pipeline.push({ $unwind: "$category" });
 
+
+    pipeline.push({
+      $lookup: {
+        from: "coupons",
+        localField: "coupon",
+        foreignField: "_id",
+        as: "couponDetails",
+      },
+    });
+
+    pipeline.push({
+      $unwind: {
+        path: "$couponDetails",
+        preserveNullAndEmptyArrays: true,
+      },
+    });
+
+
     // Match by category name (case-insensitive)
     if (search) {
       pipeline.push({
@@ -291,6 +310,7 @@ export const getProducts = async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
     pipeline.push({ $skip: skip });
     pipeline.push({ $limit: parseInt(limit) });
+    console.log(pipeline);
 
     // Execute aggregation for products
     const products = await Product.aggregate(pipeline);
@@ -582,3 +602,53 @@ export const deleteProduct = async (req, res) => {
       .json({ message: "Failed to delete product", error: error.message });
   }
 };
+
+// apply-coupon
+export const applyCouponOnProduct = async (req, res) => {
+  try {
+    const productId = req.params.id;
+    const { couponId } = req.body;
+
+
+    const coupon = await CouponModel.findById(couponId);
+    if (!coupon) {
+      return res.status(404).json({ success: false, message: "Coupon not found" });
+    }
+
+
+    if (!coupon.isActive) {
+      return res.status(400).json({ success: false, message: "Coupon is inactive" });
+    }
+    const startDate = new Date(coupon.startDate);
+    const endDate = new Date(coupon.endDate);
+
+    // const now = new Date();
+    // if (now < startDate) {
+    //   return res.status(400).json({ success: false, message: "Coupon is not yet valid" });
+    // }
+    // if (now > endDate) {
+    //   return res.status(400).json({ success: false, message: "Coupon has expired" });
+    // }
+
+
+    const product = await Product.findByIdAndUpdate(
+      productId,
+      { coupon: coupon._id },
+      { new: true }
+    ).populate("coupon");
+
+    if (!product) {
+      return res.status(404).json({ success: false, message: "Product not found" });
+    }
+
+    res.json({
+      success: true,
+      message: "Coupon applied successfully",
+      data: product
+    });
+
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+

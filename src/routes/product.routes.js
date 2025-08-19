@@ -1,5 +1,6 @@
 import express from "express";
 import {
+  applyCouponOnProduct,
   createMultipleProducts,
   createProduct,
   deleteProduct,
@@ -33,5 +34,8 @@ productRoutes.put(
   updateProduct
 );
 productRoutes.post("/addmany", createMultipleProducts);
+
+// apply-coupon 
+productRoutes.put("/apply-coupon/:id", applyCouponOnProduct);
 
 export default productRoutes;
