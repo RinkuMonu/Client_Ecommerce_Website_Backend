@@ -189,8 +189,7 @@ export const updateCategory = async (req, res) => {
     const { name, description, subcategory } = req.body;
 
     // check new uploaded images
-    const imageArray =
-      req.files?.map((file) => `/uploads/${file.filename}`) || [];
+    const imageArray = `/uploads/${req.file.filename}`
 
     // get old category
     const existingCategory = await ProductCategory.findById(id);
