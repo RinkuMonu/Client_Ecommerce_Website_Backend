@@ -65,7 +65,7 @@ export const getWebsiteById = async (req, res) => {
     try {
         const { websiteId } = req.params;
 
-        const website = await Websitelist.findById(websiteId).populate("categories", "name subcategory");
+        const website = await Websitelist.findById(websiteId).populate("categories");
 
         if (!website) {
             return res.status(404).json({ message: "Website not found." });

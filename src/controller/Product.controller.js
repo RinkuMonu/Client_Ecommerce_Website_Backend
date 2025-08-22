@@ -6,9 +6,12 @@ import mongoose from "mongoose";
 // http://localhost:5008/api/product/search?query=saree above 400&page=1&limit=20
 export const searchProducts = async (req, res) => {
   try {
-    let { query, page = 1, limit = 20 } = req.query;
-
+    let { query, referenceWebsite, page = 1, limit = 20 } = req.query;
+    if (!referenceWebsite) {
+      return res.status(400).json({ message: "Missing referenceWebsite" });
+    }
     const filter = {};
+    filter.referenceWebsite = new mongoose.Types.ObjectId(referenceWebsite);
     let priceFilter = {};
     const lowerQuery = query?.toLowerCase() || "";
 
@@ -483,12 +486,12 @@ export const getProductDetail = async (req, res) => {
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
-    res
-      .status(200)
+    res.status(200)
       .json({ message: "Product retrieved successfully", product });
   } catch (error) {
-    res
-      .status(500)
+    console.log(error);
+
+    res.status(500)
       .json({ message: "Failed to retrieve product", error: error.message });
   }
 };
