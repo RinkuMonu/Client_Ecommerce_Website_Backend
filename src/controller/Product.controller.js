@@ -132,7 +132,7 @@ export const createProduct = async (req, res) => {
       description,
       size: parsedSizes,
       material,
-      stock,
+      stock: Number(stock),
       discount: Number(discount),
       addedBy: req.user?.id?.toString(),
     });
@@ -199,6 +199,7 @@ export const getProducts = async (req, res) => {
       limit = 100,
       newArrival, // ✅ added
       material,
+      stock,
     } = req.query;
 
     if (!referenceWebsite) {
@@ -227,7 +228,6 @@ export const getProducts = async (req, res) => {
     // Flatten the joined category array
     pipeline.push({ $unwind: "$category" });
 
-
     pipeline.push({
       $lookup: {
         from: "coupons",
@@ -243,7 +243,6 @@ export const getProducts = async (req, res) => {
         preserveNullAndEmptyArrays: true,
       },
     });
-
 
     // Match by category name (case-insensitive)
     if (search) {
@@ -261,6 +260,22 @@ export const getProducts = async (req, res) => {
           material: { $regex: new RegExp(material, "i") },
         },
       });
+    }
+    // ✅ Filter by stock (Number)
+    if (stock) {
+      if (stock === "in") {
+        pipeline.push({
+          $match: { stock: { $gte: 5 } }, // stock ≥ 5 → In Stock
+        });
+      } else if (stock === "out") {
+        pipeline.push({
+          $match: { stock: { $lt: 5 } }, // stock < 5 → Out of Stock
+        });
+      } else {
+        pipeline.push({
+          $match: { stock: parseInt(stock) }, // Exact match e.g. stock=10
+        });
+      }
     }
 
     // Match by category name (case-insensitive)
@@ -486,12 +501,14 @@ export const getProductDetail = async (req, res) => {
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
-    res.status(200)
+    res
+      .status(200)
       .json({ message: "Product retrieved successfully", product });
   } catch (error) {
     console.log(error);
 
-    res.status(500)
+    res
+      .status(500)
       .json({ message: "Failed to retrieve product", error: error.message });
   }
 };
@@ -571,7 +588,7 @@ export const updateProduct = async (req, res) => {
         size: parsedSizes,
         discount,
         material,
-        stock,
+        stock: Number(stock),
       },
       { new: true }
     );
@@ -612,15 +629,17 @@ export const applyCouponOnProduct = async (req, res) => {
     const productId = req.params.id;
     const { couponId } = req.body;
 
-
     const coupon = await CouponModel.findById(couponId);
     if (!coupon) {
-      return res.status(404).json({ success: false, message: "Coupon not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Coupon not found" });
     }
 
-
     if (!coupon.isActive) {
-      return res.status(400).json({ success: false, message: "Coupon is inactive" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Coupon is inactive" });
     }
     const startDate = new Date(coupon.startDate);
     const endDate = new Date(coupon.endDate);
@@ -633,7 +652,6 @@ export const applyCouponOnProduct = async (req, res) => {
     //   return res.status(400).json({ success: false, message: "Coupon has expired" });
     // }
 
-
     const product = await Product.findByIdAndUpdate(
       productId,
       { coupon: coupon._id },
@@ -641,17 +659,17 @@ export const applyCouponOnProduct = async (req, res) => {
     ).populate("coupon");
 
     if (!product) {
-      return res.status(404).json({ success: false, message: "Product not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found" });
     }
 
     res.json({
       success: true,
       message: "Coupon applied successfully",
-      data: product
+      data: product,
     });
-
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-
