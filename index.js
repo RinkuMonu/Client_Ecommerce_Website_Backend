@@ -22,6 +22,7 @@ import bannerRoutes from "./src/routes/banner.rotes.js";
 import review from "./src/routes/review.route.js";
 import couponRoutes from "./src/routes/coupon.router.js";
 import salesRouter from "./src/routes/sales.router.js";
+import newsletter from "./src/routes/newsletter.Routes.js";
 
 dotenv.config();
 
@@ -40,14 +41,14 @@ app.use(
   cors({
     origin: [
       "http://localhost:5174",
+      "http://localhost:5175",
       "http://localhost:4002",
       "https://yourfrontenddomain.com",
       "https://jajamblockprints.com",
       "https://www.jajamblockprints.com",
       "https://admin.jajamblockprints.com",
       "https://spiral.fashion",
-      "https://www.spiral.fashion"
-
+      "https://www.spiral.fashion",
     ], // allow specific frontend domains
     credentials: true, // allow cookies and headers like Authorization
   })
@@ -65,11 +66,12 @@ app.use("/api/order", orderRoutes);
 app.use("/api/policy", policyRoutes);
 app.use("/api/banners", bannerRoutes);
 app.use("/api/sendreview", review);
+app.use("/api/newsletter", newsletter);
 
 app.post("/api/phonepe-payment", phonePeController);
 app.get("/api/dashboard", isAdmin, getDashboardData);
 app.use("/api", vendorRoutes);
-app.use('/api/coupons', couponRoutes);
+app.use("/api/coupons", couponRoutes);
 app.use("/api/salesOverview", salesRouter);
 
 // 67888fb90e1c6b678401302d

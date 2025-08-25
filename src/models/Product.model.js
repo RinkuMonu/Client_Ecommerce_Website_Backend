@@ -37,8 +37,8 @@ const productSchema = new mongoose.Schema(
       trim: true,
     },
     stock: {
-      type: Boolean,
-      default: false,
+      type: Number,
+      default: 0,
     },
     size: [
       {
