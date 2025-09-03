@@ -624,10 +624,87 @@ export const deleteProduct = async (req, res) => {
 };
 
 // apply-coupon
+// export const applyCouponOnProduct = async (req, res) => {
+//   try {
+//     const productId = req.params.id;
+//     const { couponId } = req.body;
+
+//     const coupon = await CouponModel.findById(couponId);
+//     if (!coupon) {
+//       return res
+//         .status(404)
+//         .json({ success: false, message: "Coupon not found" });
+//     }
+
+//     if (!coupon.isActive) {
+//       return res
+//         .status(400)
+//         .json({ success: false, message: "Coupon is inactive" });
+//     }
+//     const startDate = new Date(coupon.startDate);
+//     const endDate = new Date(coupon.endDate);
+
+//     // const now = new Date();
+//     // if (now < startDate) {
+//     //   return res.status(400).json({ success: false, message: "Coupon is not yet valid" });
+//     // }
+//     // if (now > endDate) {
+//     //   return res.status(400).json({ success: false, message: "Coupon has expired" });
+//     // }
+
+//     const product = await Product.findByIdAndUpdate(
+//       productId,
+//       { coupon: coupon._id },
+//       { new: true }
+//     ).populate("coupon");
+
+//     if (!product) {
+//       return res
+//         .status(404)
+//         .json({ success: false, message: "Product not found" });
+//     }
+
+//     res.json({
+//       success: true,
+//       message: "Coupon applied successfully",
+//       data: product,
+//     });
+//   } catch (error) {
+//     res.status(500).json({ success: false, message: error.message });
+//   }
+// };
+
 export const applyCouponOnProduct = async (req, res) => {
+  console.log("hitttt apply");
+
   try {
     const productId = req.params.id;
     const { couponId } = req.body;
+
+    if (couponId == "none") {
+      const product = await Product.findByIdAndUpdate(
+        productId,
+        { $unset: { coupon: "" } }, // remove coupon field
+        { new: true }
+      );
+
+      if (!product) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Product not found" });
+      }
+
+      await CouponModel.updateMany(
+        { applicableProducts: productId },
+        { $pull: { applicableProducts: productId } }
+      );
+
+      return res.json({
+        success: true,
+        message: "Coupon removed successfully",
+        data: product,
+      });
+    }
 
     const coupon = await CouponModel.findById(couponId);
     if (!coupon) {
@@ -641,17 +718,23 @@ export const applyCouponOnProduct = async (req, res) => {
         .status(400)
         .json({ success: false, message: "Coupon is inactive" });
     }
+
     const startDate = new Date(coupon.startDate);
     const endDate = new Date(coupon.endDate);
+    const now = new Date();
 
-    // const now = new Date();
-    // if (now < startDate) {
-    //   return res.status(400).json({ success: false, message: "Coupon is not yet valid" });
-    // }
-    // if (now > endDate) {
-    //   return res.status(400).json({ success: false, message: "Coupon has expired" });
-    // }
+    if (now < startDate) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Coupon is not yet valid" });
+    }
+    if (now > endDate) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Coupon has expired" });
+    }
 
+    // ✅ Apply coupon to product
     const product = await Product.findByIdAndUpdate(
       productId,
       { coupon: coupon._id },
@@ -663,6 +746,13 @@ export const applyCouponOnProduct = async (req, res) => {
         .status(404)
         .json({ success: false, message: "Product not found" });
     }
+
+    // ✅ Update coupon with product
+    await CouponModel.findByIdAndUpdate(
+      couponId,
+      { $addToSet: { applicableProducts: productId } },
+      { new: true }
+    );
 
     res.json({
       success: true,
