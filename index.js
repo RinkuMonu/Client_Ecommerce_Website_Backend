@@ -23,6 +23,7 @@ import review from "./src/routes/review.route.js";
 import salesRouter from "./src/routes/sales.router.js";
 import newsletter from "./src/routes/newsletter.Routes.js";
 import coupon from "./src/routes/coupon.router.js";
+import faqRoutes from "./src/routes/faq.routes.js";
 
 dotenv.config();
 
@@ -73,6 +74,9 @@ app.get("/api/dashboard", isAdmin, getDashboardData);
 app.use("/api", vendorRoutes);
 app.use("/api/coupons", coupon);
 app.use("/api/salesOverview", salesRouter);
+
+app.use("/api/faqs", faqRoutes);
+
 
 // 67888fb90e1c6b678401302d
 
