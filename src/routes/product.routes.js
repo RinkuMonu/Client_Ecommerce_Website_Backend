@@ -9,7 +9,8 @@ import {
   searchProducts,
   updateProduct,
   getTopSellingProducts,
-  getTopSellingCategories
+  getTopSellingCategories,
+  toggleDealOfTheDayHourly
 } from "../controller/Product.controller.js";
 import { isAdmin } from "../middleware/isAdmin.js";
 import { verifyToken } from "../middleware/verifyToken.js";
@@ -37,6 +38,9 @@ productRoutes.put(
   isAdmin,
   updateProduct
 );
+
+ productRoutes.put("/deal/:id", toggleDealOfTheDayHourly);
+
 productRoutes.post("/addmany", createMultipleProducts);
 
 // apply-coupon 
