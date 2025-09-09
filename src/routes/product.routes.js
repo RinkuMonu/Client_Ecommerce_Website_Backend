@@ -8,6 +8,8 @@ import {
   getProducts,
   searchProducts,
   updateProduct,
+  getTopSellingProducts,
+  getTopSellingCategories
 } from "../controller/Product.controller.js";
 import { isAdmin } from "../middleware/isAdmin.js";
 import { verifyToken } from "../middleware/verifyToken.js";
@@ -25,6 +27,8 @@ productRoutes.post(
 productRoutes.get("/getproducts", getProducts);
 productRoutes.get("/getproduct/:id", getProductDetail);
 productRoutes.get("/search", searchProducts);
+productRoutes.get("/topselling", getTopSellingProducts);
+productRoutes.get("/topsales", getTopSellingCategories);
 
 productRoutes.delete("/delete/:id", isAdmin, deleteProduct);
 productRoutes.put(

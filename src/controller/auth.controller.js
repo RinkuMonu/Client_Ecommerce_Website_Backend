@@ -1,6 +1,8 @@
 import bcrypt from "bcryptjs";
 import dotenv from "dotenv";
 import User from "../models/User.model.js";
+import Order from "../models/Order.model.js";
+import Wishlist from "../models/Wishlist.model.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 
@@ -298,62 +300,176 @@ export const logoutUser = (req, res) => {
   res.status(200).json({ message: "You have successfully logged out!" });
 };
 
+// export const getAllUsers = async (req, res) => {
+//   try {
+//     const {
+//       referenceWebsite, // Array of ObjectIds
+//       search,
+//       sortField = "firstName",
+//       sortOrder = "asc",
+//       page = 1,
+//       limit = 10,
+//       role,
+//     } = req.query;
+
+//     const pageNumber = parseInt(page, 10) || 1;
+//     const pageSize = parseInt(limit, 10) || 10;
+//     const skip = (pageNumber - 1) * pageSize;
+//     const filter = {};
+//     if (referenceWebsite) {
+//       filter.referenceWebsite = {
+//         $in: referenceWebsite
+//           .split(",")
+//           .map((id) => new mongoose.Types.ObjectId(id)),
+//       };
+//     }
+//     if (role) {
+//       filter.role = role;
+//     }
+//     if (search) {
+//       const regex = new RegExp(search, "i"); // Case-insensitive search
+//       filter.$or = [
+//         { firstName: regex },
+//         { lastName: regex },
+//         { email: regex },
+//       ];
+//     }
+//     const sortOptions = { [sortField]: sortOrder === "asc" ? 1 : -1 };
+//     const users = await User.find(filter)
+//       .sort(sortOptions)
+//       .skip(skip)
+//       .limit(pageSize)
+//       .select("-password"); // Exclude the password field
+//     const totalUsers = await User.countDocuments(filter);
+//     if (!users || users.length === 0) {
+//       return res.status(404).json({ msg: "No users found" });
+//     }
+//     res.status(200).json({
+//       total: totalUsers,
+//       page: pageNumber,
+//       limit: pageSize,
+//       totalPages: Math.ceil(totalUsers / pageSize),
+//       data: users,
+//     });
+//   } catch (error) {
+//     console.error(`Error fetching users: ${error.message}`);
+//     res
+//       .status(500)
+//       .json({ msg: "Failed to fetch users", error: error.message });
+//   }
+// };
+
 export const getAllUsers = async (req, res) => {
   try {
-    const {
-      referenceWebsite, // Array of ObjectIds
-      search,
-      sortField = "firstName",
-      sortOrder = "asc",
-      page = 1,
-      limit = 10,
-      role,
-    } = req.query;
+    const { page = 1, limit = 10, role, segmentation } = req.query;
+    const skip = (page - 1) * limit;
 
-    const pageNumber = parseInt(page, 10) || 1;
-    const pageSize = parseInt(limit, 10) || 10;
-    const skip = (pageNumber - 1) * pageSize;
-    const filter = {};
-    if (referenceWebsite) {
-      filter.referenceWebsite = {
-        $in: referenceWebsite
-          .split(",")
-          .map((id) => new mongoose.Types.ObjectId(id)),
-      };
-    }
+    // Base pipeline
+    let pipeline = [];
+
+    // Optional role filter
     if (role) {
-      filter.role = role;
+      pipeline.push({ $match: { role } });
     }
-    if (search) {
-      const regex = new RegExp(search, "i"); // Case-insensitive search
-      filter.$or = [
-        { firstName: regex },
-        { lastName: regex },
-        { email: regex },
-      ];
+
+    // Lookup orders
+    pipeline.push(
+      {
+        $lookup: {
+          from: "orders",
+          localField: "_id",
+          foreignField: "customer",
+          as: "orders",
+        },
+      },
+      {
+        $lookup: {
+          from: "wishlists",
+          let: { userId: { $toString: "$_id" } }, // convert _id to string for match
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ["$identifier", "$$userId"] },
+              },
+            },
+          ],
+          as: "wishlist",
+        },
+      },
+      {
+        $addFields: {
+          orderCount: { $size: "$orders" },
+          totalSpent: {
+            $sum: {
+              $map: {
+                input: "$orders",
+                as: "order",
+                in: "$$order.totalAmount",
+              },
+            },
+          },
+          savedAddresses: { $ifNull: ["$addresses", []] },
+          wishlistItems: {
+            $ifNull: [{ $arrayElemAt: ["$wishlist.items", 0] }, []],
+          },
+        },
+      }
+    );
+
+    // Segmentation logic
+    const tenDaysAgo = new Date();
+    tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
+
+    if (segmentation) {
+      if (segmentation === "loyal") {
+        pipeline.push({ $match: { orderCount: { $gte: 10 } } });
+      } else if (segmentation === "high-value") {
+        pipeline.push({ $match: { totalSpent: { $gte: 5000 } } });
+      } else if (segmentation === "new") {
+        pipeline.push({ $match: { createdAt: { $gte: tenDaysAgo } } });
+      }
     }
-    const sortOptions = { [sortField]: sortOrder === "asc" ? 1 : -1 };
-    const users = await User.find(filter)
-      .sort(sortOptions)
-      .skip(skip)
-      .limit(pageSize)
-      .select("-password"); // Exclude the password field
-    const totalUsers = await User.countDocuments(filter);
-    if (!users || users.length === 0) {
-      return res.status(404).json({ msg: "No users found" });
-    }
+
+    // Add segment field
+    pipeline.push({
+      $addFields: {
+        segment: {
+          $switch: {
+            branches: [
+              { case: { $gte: ["$orderCount", 10] }, then: "loyal" },
+              { case: { $gte: ["$totalSpent", 5000] }, then: "high-value" },
+              { case: { $gte: ["$createdAt", tenDaysAgo] }, then: "new" },
+            ],
+            default: "regular",
+          },
+        },
+      },
+    });
+
+    // Total count pipeline
+    const totalPipeline = [...pipeline, { $count: "total" }];
+    const totalResult = await User.aggregate(totalPipeline);
+    const totalUsers = totalResult[0]?.total || 0;
+
+    // Pagination pipeline
+    pipeline.push({ $skip: parseInt(skip) }, { $limit: parseInt(limit) });
+
+    const users = await User.aggregate(pipeline);
+
     res.status(200).json({
-      total: totalUsers,
-      page: pageNumber,
-      limit: pageSize,
-      totalPages: Math.ceil(totalUsers / pageSize),
-      data: users,
+      success: true,
+      totalUsers,
+      page: parseInt(page),
+      totalPages: Math.ceil(totalUsers / limit),
+      users,
     });
   } catch (error) {
-    console.error(`Error fetching users: ${error.message}`);
-    res
-      .status(500)
-      .json({ msg: "Failed to fetch users", error: error.message });
+    console.error("Error fetching users:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching users",
+      error: error.message,
+    });
   }
 };
 

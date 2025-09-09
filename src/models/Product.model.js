@@ -64,6 +64,14 @@ const productSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Coupon",
     },
+    dealOfTheDay: {
+      type: Boolean,
+      default: false,
+    },
+    dealActivatedAt: {
+      type: Date,
+      default: null,
+    },
 
     addedBy: {
       type: mongoose.Schema.Types.ObjectId,
