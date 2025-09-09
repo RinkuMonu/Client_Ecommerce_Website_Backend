@@ -1,5 +1,7 @@
 import CouponModel from "../models/Coupon.model.js";
 import Product from "../models/Product.model.js";
+import Order from "../models/Order.model.js";
+import ProductCategory from "../models/Catergroy.model.js";
 import mongoose from "mongoose";
 
 // /api/product/search?query=saree under 400&page=1&limit=20
@@ -761,5 +763,211 @@ export const applyCouponOnProduct = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getTopSellingProducts = async (req, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // Base pipeline (before pagination)
+    const basePipeline = [
+      {
+        $match: {
+          status: "delivered", // only delivered orders
+          paymentStatus: "completed", // payment completed
+        },
+      },
+      { $unwind: "$products" },
+      {
+        $group: {
+          _id: "$products.product",
+          totalOrders: { $sum: 1 },
+          totalQuantity: { $sum: "$products.quantity" },
+        },
+      },
+      {
+        $match: {
+          totalOrders: { $gte: 3 }, // ✅ at least 3 completed orders
+        },
+      },
+    ];
+
+    // Count total documents
+    const countPipeline = [...basePipeline, { $count: "totalDocuments" }];
+    const countResult = await Order.aggregate(countPipeline);
+    const totalDocuments = countResult[0]?.totalDocuments || 0;
+    const totalPages = Math.ceil(totalDocuments / parseInt(limit));
+
+    // Full pipeline with sorting + lookup + pagination
+    const pipeline = [
+      ...basePipeline,
+      { $sort: { totalOrders: -1 } },
+      {
+        $lookup: {
+          from: "products",
+          localField: "_id",
+          foreignField: "_id",
+          as: "productDetails",
+        },
+      },
+      { $unwind: "$productDetails" },
+      { $skip: skip },
+      { $limit: parseInt(limit) },
+    ];
+
+    const topProducts = await Order.aggregate(pipeline);
+
+    res.status(200).json({
+      success: true,
+      message: "Top selling products retrieved successfully",
+      topProducts,
+      pagination: {
+        totalDocuments,
+        totalPages,
+        currentPage: parseInt(page),
+        pageSize: parseInt(limit),
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching top selling products:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch top selling products",
+      error: error.message,
+    });
+  }
+};
+
+export const getTopSellingCategories = async (req, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const basePipeline = [
+      { $match: { status: "delivered", paymentStatus: "completed" } },
+      { $unwind: "$products" },
+      {
+        $lookup: {
+          from: "products",
+          localField: "products.product",
+          foreignField: "_id",
+          as: "productDetails",
+        },
+      },
+      { $unwind: "$productDetails" },
+      {
+        $group: {
+          _id: "$productDetails.category",
+          totalOrders: { $sum: 1 },
+          totalQuantity: { $sum: "$products.quantity" },
+        },
+      },
+      // Optional: Remove totalOrders filter
+      // { $match: { totalOrders: { $gte: 3 } } },
+    ];
+
+    const countPipeline = [...basePipeline, { $count: "totalDocuments" }];
+    const countResult = await Order.aggregate(countPipeline);
+    const totalDocuments = countResult[0]?.totalDocuments || 0;
+    const totalPages = Math.ceil(totalDocuments / parseInt(limit));
+
+    const pipeline = [
+      ...basePipeline,
+      { $sort: { totalOrders: -1 } },
+      {
+        $lookup: {
+          from: "productcategories",
+          localField: "_id",
+          foreignField: "_id",
+          as: "categoryDetails",
+        },
+      },
+      {
+        $unwind: {
+          path: "$categoryDetails",
+          preserveNullAndEmptyArrays: true, // important!
+        },
+      },
+      { $skip: skip },
+      { $limit: parseInt(limit) },
+    ];
+
+    const topCategories = await Order.aggregate(pipeline);
+
+    res.status(200).json({
+      success: true,
+      message: "Top selling categories retrieved successfully",
+      topCategories,
+      pagination: {
+        totalDocuments,
+        totalPages,
+        currentPage: parseInt(page),
+        pageSize: parseInt(limit),
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching top selling categories:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch top selling categories",
+      error: error.message,
+    });
+  }
+};
+
+export const toggleDealOfTheDayHourly = async (req, res) => {
+  try {
+    const productId = req.params.id;
+    const product = await Product.findById(productId);
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    const now = new Date();
+    const currentHour = now.getHours();
+
+    let newStatus = false;
+
+    if (!product.dealOfTheDay) {
+      // Product is inactive → make it active
+      newStatus = true;
+      product.dealOfTheDay = true;
+      product.dealActivatedAt = now;
+    } else {
+      // Product is active → check if still in the same hour
+      const activatedHour = product.dealActivatedAt
+        ? product.dealActivatedAt.getHours()
+        : null;
+
+      if (activatedHour !== currentHour) {
+        // Hour changed → activate for new hour
+        newStatus = true;
+        product.dealActivatedAt = now;
+      } else {
+        // Same hour → deactivate
+        newStatus = false;
+        product.dealOfTheDay = false;
+        product.dealActivatedAt = null;
+      }
+    }
+
+    await product.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Deal of the Day is now ${newStatus ? "ACTIVE" : "INACTIVE"}`,
+      product,
+    });
+  } catch (error) {
+    console.error("Error toggling hourly deal:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to toggle hourly deal",
+      error: error.message,
+    });
   }
 };

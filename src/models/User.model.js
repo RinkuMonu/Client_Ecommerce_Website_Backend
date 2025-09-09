@@ -56,7 +56,11 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
-});
+},
+  {
+    timestamps: true,
+  }
+);
 
 // Method to create an access token
 userSchema.methods.createAccessToken = function () {
