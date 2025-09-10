@@ -72,6 +72,10 @@ const productSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    dealExpiresAt: {
+      type: Date,
+      default: null,
+    },
 
     addedBy: {
       type: mongoose.Schema.Types.ObjectId,

@@ -10,7 +10,8 @@ import {
   updateProduct,
   getTopSellingProducts,
   getTopSellingCategories,
-  toggleDealOfTheDayHourly
+  toggleDealOfTheDayHourly,
+  getDealOfTheDayProducts
 } from "../controller/Product.controller.js";
 import { isAdmin } from "../middleware/isAdmin.js";
 import { verifyToken } from "../middleware/verifyToken.js";
@@ -30,6 +31,7 @@ productRoutes.get("/getproduct/:id", getProductDetail);
 productRoutes.get("/search", searchProducts);
 productRoutes.get("/topselling", getTopSellingProducts);
 productRoutes.get("/topsales", getTopSellingCategories);
+productRoutes.get("/deals", getDealOfTheDayProducts);
 
 productRoutes.delete("/delete/:id", isAdmin, deleteProduct);
 productRoutes.put(

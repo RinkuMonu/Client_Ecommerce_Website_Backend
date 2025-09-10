@@ -921,6 +921,8 @@ export const getTopSellingCategories = async (req, res) => {
 export const toggleDealOfTheDayHourly = async (req, res) => {
   try {
     const productId = req.params.id;
+    const durationInHours = req.body.duration || 1; // default 1 hour if not passed
+
     const product = await Product.findById(productId);
 
     if (!product) {
@@ -928,38 +930,43 @@ export const toggleDealOfTheDayHourly = async (req, res) => {
     }
 
     const now = new Date();
-    const currentHour = now.getHours();
 
-    let newStatus = false;
-
-    if (!product.dealOfTheDay) {
-      // Product is inactive → make it active
-      newStatus = true;
-      product.dealOfTheDay = true;
-      product.dealActivatedAt = now;
-    } else {
-      // Product is active → check if still in the same hour
-      const activatedHour = product.dealActivatedAt
-        ? product.dealActivatedAt.getHours()
-        : null;
-
-      if (activatedHour !== currentHour) {
-        // Hour changed → activate for new hour
-        newStatus = true;
-        product.dealActivatedAt = now;
+    // If product already has an active deal, check expiry
+    if (product.dealOfTheDay && product.dealExpiresAt) {
+      if (now < product.dealExpiresAt) {
+        // Deal is still active
+        return res.status(200).json({
+          success: true,
+          message: `Deal is already ACTIVE until ${product.dealExpiresAt.toLocaleString()}`,
+          product,
+        });
       } else {
-        // Same hour → deactivate
-        newStatus = false;
+        // Expired → deactivate
         product.dealOfTheDay = false;
         product.dealActivatedAt = null;
+        product.dealExpiresAt = null;
+        await product.save();
+
+        return res.status(200).json({
+          success: true,
+          message: "Previous deal expired. Product is now INACTIVE.",
+          product,
+        });
       }
     }
+
+    // If inactive → activate a new deal for given duration
+    const expiry = new Date(now.getTime() + durationInHours * 60 * 60 * 1000);
+
+    product.dealOfTheDay = true;
+    product.dealActivatedAt = now;
+    product.dealExpiresAt = expiry;
 
     await product.save();
 
     res.status(200).json({
       success: true,
-      message: `Deal of the Day is now ${newStatus ? "ACTIVE" : "INACTIVE"}`,
+      message: `Deal of the Day is now ACTIVE for ${durationInHours} hour(s), until ${expiry.toLocaleString()}`,
       product,
     });
   } catch (error) {
@@ -967,6 +974,37 @@ export const toggleDealOfTheDayHourly = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to toggle hourly deal",
+      error: error.message,
+    });
+  }
+};
+
+export const getDealOfTheDayProducts = async (req, res) => {
+  try {
+    const now = new Date();
+
+    // Find products where dealOfTheDay is true AND dealExpiresAt is in the future
+    const activeDeals = await Product.find({
+      dealOfTheDay: true,
+      dealExpiresAt: { $gt: now },
+    });
+
+    // Optional: Auto-clean expired deals (set them inactive if expired)
+    await Product.updateMany(
+      { dealOfTheDay: true, dealExpiresAt: { $lte: now } },
+      { $set: { dealOfTheDay: false, dealActivatedAt: null, dealExpiresAt: null } }
+    );
+
+    res.status(200).json({
+      success: true,
+      count: activeDeals.length,
+      products: activeDeals,
+    });
+  } catch (error) {
+    console.error("Error fetching deal of the day products:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch deal of the day products",
       error: error.message,
     });
   }
