@@ -300,64 +300,138 @@ export const logoutUser = (req, res) => {
   res.status(200).json({ message: "You have successfully logged out!" });
 };
 
+
 // export const getAllUsers = async (req, res) => {
 //   try {
-//     const {
-//       referenceWebsite, // Array of ObjectIds
-//       search,
-//       sortField = "firstName",
-//       sortOrder = "asc",
-//       page = 1,
-//       limit = 10,
-//       role,
+//     const { 
+//       page = 1, 
+//       limit = 10, 
+//       role, 
+//       segmentation, 
+//       search, 
+//       sortBy = "createdAt",   // default sort field
+//       sortOrder = "desc"      // "asc" or "desc"
 //     } = req.query;
 
-//     const pageNumber = parseInt(page, 10) || 1;
-//     const pageSize = parseInt(limit, 10) || 10;
-//     const skip = (pageNumber - 1) * pageSize;
-//     const filter = {};
-//     if (referenceWebsite) {
-//       filter.referenceWebsite = {
-//         $in: referenceWebsite
-//           .split(",")
-//           .map((id) => new mongoose.Types.ObjectId(id)),
-//       };
-//     }
+//     const skip = (page - 1) * limit;
+
+//     // Base pipeline
+//     let pipeline = [];
+
+//     // Optional role filter
 //     if (role) {
-//       filter.role = role;
+//       pipeline.push({ $match: { role } });
 //     }
+
+//     // Optional search filter
 //     if (search) {
-//       const regex = new RegExp(search, "i"); // Case-insensitive search
-//       filter.$or = [
-//         { firstName: regex },
-//         { lastName: regex },
-//         { email: regex },
-//       ];
+//       pipeline.push({
+//         $match: {
+//           $or: [
+//             { firstName: { $regex: search, $options: "i" } },
+//             { lastName: { $regex: search, $options: "i" } },
+//             { email: { $regex: search, $options: "i" } },
+//             { mobile: { $regex: search, $options: "i" } },
+//           ],
+//         },
+//       });
 //     }
-//     const sortOptions = { [sortField]: sortOrder === "asc" ? 1 : -1 };
-//     const users = await User.find(filter)
-//       .sort(sortOptions)
-//       .skip(skip)
-//       .limit(pageSize)
-//       .select("-password"); // Exclude the password field
-//     const totalUsers = await User.countDocuments(filter);
-//     if (!users || users.length === 0) {
-//       return res.status(404).json({ msg: "No users found" });
+
+//     // Lookup orders
+//     pipeline.push(
+//       {
+//         $lookup: {
+//           from: "orders",
+//           localField: "_id",
+//           foreignField: "customer", // assuming "customer" in orders refers to user._id
+//           as: "orders",
+//         },
+//       },
+//       {
+//         $addFields: {
+//           orderCount: { $size: "$orders" },
+//           totalSpent: {
+//             $sum: {
+//               $map: {
+//                 input: "$orders",
+//                 as: "order",
+//                 in: "$$order.totalAmount",
+//               },
+//             },
+//           },
+//         },
+//       }
+//     );
+
+//     // Segmentation logic
+//     const tenDaysAgo = new Date();
+//     tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
+
+//     if (segmentation) {
+//       if (segmentation === "loyal") {
+//         pipeline.push({ $match: { orderCount: { $gte: 10 } } });
+//       } else if (segmentation === "high-value") {
+//         pipeline.push({ $match: { totalSpent: { $gte: 5000 } } });
+//       } else if (segmentation === "new") {
+//         pipeline.push({ $match: { createdAt: { $gte: tenDaysAgo } } });
+//       } else if (segmentation === "regular") {
+//         pipeline.push({
+//           $match: {
+//             orderCount: { $lt: 10 },
+//             totalSpent: { $lt: 5000 },
+//             createdAt: { $lt: tenDaysAgo },
+//           },
+//         });
+//       }
 //     }
+
+//     // Add computed segment field
+//     pipeline.push({
+//       $addFields: {
+//         segment: {
+//           $switch: {
+//             branches: [
+//               { case: { $gte: ["$orderCount", 10] }, then: "loyal" },
+//               { case: { $gte: ["$totalSpent", 5000] }, then: "high-value" },
+//               { case: { $gte: ["$createdAt", tenDaysAgo] }, then: "new" },
+//             ],
+//             default: "regular",
+//           },
+//         },
+//       },
+//     });
+
+//     // Sorting
+//     const sortDirection = sortOrder === "asc" ? 1 : -1;
+//     pipeline.push({ $sort: { [sortBy]: sortDirection } });
+
+//     // Total count pipeline
+//     const totalPipeline = [...pipeline, { $count: "total" }];
+//     const totalResult = await User.aggregate(totalPipeline);
+//     const totalUsers = totalResult[0]?.total || 0;
+
+//     // Pagination
+//     pipeline.push({ $skip: parseInt(skip) }, { $limit: parseInt(limit) });
+
+//     const users = await User.aggregate(pipeline);
+
 //     res.status(200).json({
-//       total: totalUsers,
-//       page: pageNumber,
-//       limit: pageSize,
-//       totalPages: Math.ceil(totalUsers / pageSize),
-//       data: users,
+//       success: true,
+//       totalUsers,
+//       page: parseInt(page),
+//       totalPages: Math.ceil(totalUsers / limit),
+//       users,
 //     });
 //   } catch (error) {
-//     console.error(`Error fetching users: ${error.message}`);
-//     res
-//       .status(500)
-//       .json({ msg: "Failed to fetch users", error: error.message });
+//     console.error("Error fetching users:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Error fetching users",
+//       error: error.message,
+//     });
 //   }
 // };
+
 
 export const getAllUsers = async (req, res) => {
   try {
@@ -373,15 +447,12 @@ export const getAllUsers = async (req, res) => {
 
     const skip = (page - 1) * limit;
 
-    // Base pipeline
     let pipeline = [];
 
-    // Optional role filter
     if (role) {
       pipeline.push({ $match: { role } });
     }
 
-    // Optional search filter
     if (search) {
       pipeline.push({
         $match: {
@@ -395,13 +466,15 @@ export const getAllUsers = async (req, res) => {
       });
     }
 
-    // Lookup orders
+    const tenDaysAgo = new Date();
+    tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
+
     pipeline.push(
       {
         $lookup: {
           from: "orders",
           localField: "_id",
-          foreignField: "customer", // assuming "customer" in orders refers to user._id
+          foreignField: "customer",
           as: "orders",
         },
       },
@@ -418,57 +491,34 @@ export const getAllUsers = async (req, res) => {
             },
           },
         },
+      },
+      {
+        $addFields: {
+          segment: {
+            $switch: {
+              branches: [
+                { case: { $gte: [ "$orderCount", 10 ] }, then: "loyal" },
+                { case: { $gte: [ "$totalSpent", 5000 ] }, then: "high-value" },
+                { case: { $gte: [ "$createdAt", tenDaysAgo ] }, then: "new" }
+              ],
+              default: "regular"
+            }
+          }
+        }
       }
     );
 
-    // Segmentation logic
-    const tenDaysAgo = new Date();
-    tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
-
     if (segmentation) {
-      if (segmentation === "loyal") {
-        pipeline.push({ $match: { orderCount: { $gte: 10 } } });
-      } else if (segmentation === "high-value") {
-        pipeline.push({ $match: { totalSpent: { $gte: 5000 } } });
-      } else if (segmentation === "new") {
-        pipeline.push({ $match: { createdAt: { $gte: tenDaysAgo } } });
-      } else if (segmentation === "regular") {
-        pipeline.push({
-          $match: {
-            orderCount: { $lt: 10 },
-            totalSpent: { $lt: 5000 },
-            createdAt: { $lt: tenDaysAgo },
-          },
-        });
-      }
+      pipeline.push({ $match: { segment: segmentation } });
     }
 
-    // Add computed segment field
-    pipeline.push({
-      $addFields: {
-        segment: {
-          $switch: {
-            branches: [
-              { case: { $gte: ["$orderCount", 10] }, then: "loyal" },
-              { case: { $gte: ["$totalSpent", 5000] }, then: "high-value" },
-              { case: { $gte: ["$createdAt", tenDaysAgo] }, then: "new" },
-            ],
-            default: "regular",
-          },
-        },
-      },
-    });
-
-    // Sorting
     const sortDirection = sortOrder === "asc" ? 1 : -1;
     pipeline.push({ $sort: { [sortBy]: sortDirection } });
 
-    // Total count pipeline
     const totalPipeline = [...pipeline, { $count: "total" }];
     const totalResult = await User.aggregate(totalPipeline);
     const totalUsers = totalResult[0]?.total || 0;
 
-    // Pagination
     pipeline.push({ $skip: parseInt(skip) }, { $limit: parseInt(limit) });
 
     const users = await User.aggregate(pipeline);
@@ -489,6 +539,8 @@ export const getAllUsers = async (req, res) => {
     });
   }
 };
+
+
 
 export const requestPasswordReset = async (req, res) => {
   try {
