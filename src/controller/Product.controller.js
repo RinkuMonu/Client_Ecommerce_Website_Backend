@@ -980,6 +980,7 @@ export const toggleDealOfTheDayHourly = async (req, res) => {
   }
 };
 
+
 export const getDealOfTheDayProducts = async (req, res) => {
   try {
     const now = new Date();
