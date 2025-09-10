@@ -361,7 +361,16 @@ export const logoutUser = (req, res) => {
 
 export const getAllUsers = async (req, res) => {
   try {
-    const { page = 1, limit = 10, role, segmentation } = req.query;
+    const { 
+      page = 1, 
+      limit = 10, 
+      role, 
+      segmentation, 
+      search, 
+      sortBy = "createdAt",   // default sort field
+      sortOrder = "desc"      // "asc" or "desc"
+    } = req.query;
+
     const skip = (page - 1) * limit;
 
     // Base pipeline
@@ -372,28 +381,28 @@ export const getAllUsers = async (req, res) => {
       pipeline.push({ $match: { role } });
     }
 
+    // Optional search filter
+    if (search) {
+      pipeline.push({
+        $match: {
+          $or: [
+            { firstName: { $regex: search, $options: "i" } },
+            { lastName: { $regex: search, $options: "i" } },
+            { email: { $regex: search, $options: "i" } },
+            { mobile: { $regex: search, $options: "i" } },
+          ],
+        },
+      });
+    }
+
     // Lookup orders
     pipeline.push(
       {
         $lookup: {
           from: "orders",
           localField: "_id",
-          foreignField: "customer",
+          foreignField: "customer", // assuming "customer" in orders refers to user._id
           as: "orders",
-        },
-      },
-      {
-        $lookup: {
-          from: "wishlists",
-          let: { userId: { $toString: "$_id" } }, // convert _id to string for match
-          pipeline: [
-            {
-              $match: {
-                $expr: { $eq: ["$identifier", "$$userId"] },
-              },
-            },
-          ],
-          as: "wishlist",
         },
       },
       {
@@ -407,10 +416,6 @@ export const getAllUsers = async (req, res) => {
                 in: "$$order.totalAmount",
               },
             },
-          },
-          savedAddresses: { $ifNull: ["$addresses", []] },
-          wishlistItems: {
-            $ifNull: [{ $arrayElemAt: ["$wishlist.items", 0] }, []],
           },
         },
       }
@@ -427,10 +432,18 @@ export const getAllUsers = async (req, res) => {
         pipeline.push({ $match: { totalSpent: { $gte: 5000 } } });
       } else if (segmentation === "new") {
         pipeline.push({ $match: { createdAt: { $gte: tenDaysAgo } } });
+      } else if (segmentation === "regular") {
+        pipeline.push({
+          $match: {
+            orderCount: { $lt: 10 },
+            totalSpent: { $lt: 5000 },
+            createdAt: { $lt: tenDaysAgo },
+          },
+        });
       }
     }
 
-    // Add segment field
+    // Add computed segment field
     pipeline.push({
       $addFields: {
         segment: {
@@ -446,12 +459,16 @@ export const getAllUsers = async (req, res) => {
       },
     });
 
+    // Sorting
+    const sortDirection = sortOrder === "asc" ? 1 : -1;
+    pipeline.push({ $sort: { [sortBy]: sortDirection } });
+
     // Total count pipeline
     const totalPipeline = [...pipeline, { $count: "total" }];
     const totalResult = await User.aggregate(totalPipeline);
     const totalUsers = totalResult[0]?.total || 0;
 
-    // Pagination pipeline
+    // Pagination
     pipeline.push({ $skip: parseInt(skip) }, { $limit: parseInt(limit) });
 
     const users = await User.aggregate(pipeline);
