@@ -10,7 +10,7 @@ import {
 const router = express.Router();
 
 // CRUD routes
-router.post("/create", createFAQ);     // Create FAQ
+router.post("/create", createFAQ);     
 router.get("/all", getAllFAQs);       // Get all FAQs
 router.get("/:id", getFAQById);       // Get single FAQ
 router.put("/:id", updateFAQ);        // Update FAQ
