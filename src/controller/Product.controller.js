@@ -860,35 +860,36 @@ export const getTopSellingCategories = async (req, res) => {
       { $unwind: "$productDetails" },
       {
         $group: {
-          _id: "$productDetails.category",
-          totalOrders: { $sum: 1 },
-          totalQuantity: { $sum: "$products.quantity" },
+          _id: "$productDetails.category", // group by category id
+          totalOrders: { $sum: 1 },        // number of orders containing this category
         },
       },
-      // Optional: Remove totalOrders filter
-      // { $match: { totalOrders: { $gte: 3 } } },
     ];
 
+    // Count total categories
     const countPipeline = [...basePipeline, { $count: "totalDocuments" }];
     const countResult = await Order.aggregate(countPipeline);
     const totalDocuments = countResult[0]?.totalDocuments || 0;
     const totalPages = Math.ceil(totalDocuments / parseInt(limit));
 
+    // Main query with pagination + category lookup
     const pipeline = [
       ...basePipeline,
       { $sort: { totalOrders: -1 } },
       {
         $lookup: {
-          from: "productcategories",
+          from: "productcategories", // join with categories collection
           localField: "_id",
           foreignField: "_id",
           as: "categoryDetails",
         },
       },
+      { $unwind: "$categoryDetails" },
       {
-        $unwind: {
-          path: "$categoryDetails",
-          preserveNullAndEmptyArrays: true, // important!
+        $project: {
+          _id: 0,
+          categoryName: "$categoryDetails.name",
+          totalOrders: 1,
         },
       },
       { $skip: skip },
