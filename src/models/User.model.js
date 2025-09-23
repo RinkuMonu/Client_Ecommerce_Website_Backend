@@ -26,10 +26,12 @@ const userSchema = new mongoose.Schema({
   address: {
     type: String,
   },
-  password: {
-    type: String,
-    required: true,
+password: {
+  type: String,
+  required: function () {
+    return !this.googleId;
   },
+},
   role: {
     type: String,
     default: "user",
@@ -56,10 +58,10 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  googleId: { type: String, unique: true, sparse: true },
+  avatar: { type: String, default: "" },
 },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
 // Method to create an access token
