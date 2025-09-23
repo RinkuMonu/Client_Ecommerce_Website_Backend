@@ -27,6 +27,8 @@ import faqRoutes from "./src/routes/faq.routes.js";
 
 dotenv.config();
 
+console.log("GOOGLE_CLIENT_ID:", process.env.GOOGLE_CLIENT_ID); 
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 

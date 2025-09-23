@@ -5,8 +5,89 @@ import Order from "../models/Order.model.js";
 import Wishlist from "../models/Wishlist.model.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
+import { OAuth2Client } from "google-auth-library";
 
-dotenv.config({ path: "../.env" });
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+
+export const googleSignIn = async (req, res) => {
+  try {
+    const { idToken, referenceWebsite } = req.body;
+
+    if (!idToken || !referenceWebsite) {
+      return res.status(400).json({ msg: "idToken and referenceWebsite are required." });
+    }
+
+    // verify token
+    const ticket = await client.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    if (!payload) throw new Error("Invalid Google token");
+
+    const { sub: googleId, email, name, picture } = payload;
+    const nameParts = (name || "").split(" ");
+    const firstName = nameParts.shift() || "User";
+    const lastName = nameParts.join(" ") || "";
+
+    let user = await User.findOne({ email, referenceWebsite });
+
+    if (user) {
+      if (!user.googleId) {
+        user.googleId = googleId;
+        if (!user.avatar && picture) user.avatar = picture;
+        await user.save();
+      }
+    } else {
+      user = await User.create({
+        firstName,
+        lastName,
+        email,
+        referenceWebsite,
+        googleId,
+        avatar: picture,
+        role: "user",
+      });
+    }
+
+    // ensure user instance methods exist
+    if (!user.createAccessToken || !user.createRefreshToken) {
+      throw new Error("User token methods not defined");
+    }
+
+    const accessToken = user.createAccessToken();
+    const refreshToken = user.createRefreshToken();
+
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "Strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    res.cookie("accessToken", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "Strict",
+      maxAge: 2 * 24 * 60 * 60 * 1000,
+    });
+
+    user.password = undefined;
+
+    res.status(200).json({
+      userData: user,
+      msg: "Logged in with Google successfully",
+      accessToken,
+      refreshToken,
+    });
+  } catch (error) {
+    console.error("googleSignIn error:", error);
+    res.status(500).json({ msg: "Google sign-in failed", error: error.message });
+  }
+};
 
 export const registerUser = async (req, res) => {
   try {
@@ -612,3 +693,4 @@ export const resetPassword = async (req, res) => {
     res.status(500).json({ msg: "Failed to reset password." });
   }
 };
+
