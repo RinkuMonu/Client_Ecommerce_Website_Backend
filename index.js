@@ -24,6 +24,8 @@ import salesRouter from "./src/routes/sales.router.js";
 import newsletter from "./src/routes/newsletter.Routes.js";
 import coupon from "./src/routes/coupon.router.js";
 import faqRoutes from "./src/routes/faq.routes.js";
+import zaakpayRoutes from "./src/routes/ZaakpayRoutes.js";
+
 
 dotenv.config();
 
@@ -75,7 +77,7 @@ app.post("/api/phonepe-payment", phonePeController);
 app.get("/api/dashboard", isAdmin, getDashboardData);
 app.use("/api", vendorRoutes);
 app.use("/api/coupons", coupon);
-app.use("/api/salesOverview", salesRouter);
+app.use("/api/pay", zaakpayRoutes);
 
 app.use("/api/faqs", faqRoutes);
 
