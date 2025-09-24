@@ -83,57 +83,57 @@ router.post("/pay", async (req, res) => {
 
 
 router.post("/callback", (req, res) => {
-  try {
-    const secretKey = "6b86b801cd5e4822b1fb2fa6528213d4";
+    try {
+        const secretKey = "6b86b801cd5e4822b1fb2fa6528213d4";
 
-    const {
-      orderId,
-      responseCode,
-      responseDescription,
-      amount,
-      doRedirect,
-      paymentMode,
-      bankid,
-      productDescription,
-      pgTransId,
-      pgTransTime,
-      checksum,
-    } = req.body;
+        const {
+            orderId,
+            responseCode,
+            responseDescription,
+            amount,
+            doRedirect,
+            paymentMode,
+            bankid,
+            productDescription,
+            pgTransId,
+            pgTransTime,
+            checksum,
+        } = req.body;
 
-    // Convert everything to string safely
-    const fields = [
-      orderId,
-      responseCode,
-      responseDescription,
-      amount,
-      doRedirect,
-      paymentMode,
-      bankid,
-      productDescription,
-      pgTransId,
-      pgTransTime,
-    ].map((val) => (val !== undefined && val !== null ? String(val) : ""));
+        // Convert everything to string safely
+        const fields = [
+            orderId,
+            responseCode,
+            responseDescription,
+            amount,
+            doRedirect,
+            paymentMode,
+            bankid,
+            productDescription,
+            pgTransId,
+            pgTransTime,
+        ].map((val) => `'${val !== undefined && val !== null ? String(val) : ""}'`);
 
-    const checksumString = fields.join("");
+        const checksumString = fields.join("");
 
-    const calculatedChecksum = generateChecksum(checksumString, secretKey);
+        const calculatedChecksum = generateChecksum(checksumString, secretKey);
 
-    console.log("String Used    :", checksumString);
-    console.log("Zaakpay Checksum:", checksum);
-    console.log("Our Calculated :", calculatedChecksum);
+        console.log("String Used    :", checksumString);
+        console.log("Zaakpay Checksum:", checksum);
+        console.log("Our Calculated :", calculatedChecksum);
 
-    if (calculatedChecksum === checksum && responseCode === "100") {
-      console.log("✅ Payment success for", orderId);
-      // Update DB as Paid
-      res.status(200).send("Payment verified successfully");
-    } else {
-      console.log("❌ Payment failed or checksum mismatch");
-      res.status(400).send("Checksum mismatch or failed txn");
+        if (calculatedChecksum === checksum && responseCode === "100") {
+            console.log("✅ Payment success for", orderId);
+            // Update DB as Paid
+            res.status(200).send("Payment verified successfully");
+        } else {
+            console.log("❌ Payment failed or checksum mismatch");
+            res.status(400).send("Checksum mismatch or failed txn");
+        }
+    } catch (error) {
+        console.error("Callback Error:", error);
+        res.status(500).send("Server error");
     }
-  } catch (error) {
-    console.error("Callback Error:", error);
-    res.status(500).send("Server error");
-  }
 });
 
 
