@@ -6,7 +6,9 @@ dotenv.config();
 const merchantIdentifier = process.env.ZAAKPAY_MERCHANT_ID;
 const secretKey = process.env.ZAAKPAY_SECRET_KEY;
 const endpoint = process.env.ZAAKPAY_ENDPOINT;
+const callbackUrl = process.env.ZAAKPAY_CALLBACK_URL;
 
+// 🔑 Generate checksum
 function generateChecksum(params) {
   let str = "";
   const orderedKeys = [
@@ -33,110 +35,74 @@ function generateChecksum(params) {
   ];
 
   orderedKeys.forEach((key) => {
-    if (params[key] !== undefined && params[key] !== null && params[key] !== "") {
-      str += params[key];
-    }
+    if (params[key]) str += params[key];
   });
 
   return crypto.createHmac("sha256", secretKey).update(str, "utf8").digest("hex");
 }
 
+// 🔹 Step 1: Initiate Payment
 export const initiatePayment = async (req, res) => {
   try {
-    const {
-      amount,
-      orderId,
-      email,
-      mobile,
-      firstName,
-      lastName,
-      address,
-      city,
-      state,
-      country,
-      pincode,
-      returnUrl,
-    } = req.body;
-
-    const txnDate = new Date().toISOString().replace("T", " ").slice(0, 19);
+    const { orderId, amount } = req.body;
 
     const params = {
       merchantIdentifier,
-      orderId,
-      buyerEmail: email,
-      buyerPhoneNumber: mobile,
-      buyerFirstName: firstName || "John",
-      buyerLastName: lastName || "Doe",
-      buyerAddress: address || "Test Address",
-      buyerCity: city || "Delhi",
-      buyerState: state || "Delhi",
-      buyerCountry: country || "IND",
-      buyerPincode: pincode || "110001",
+      orderId: orderId.toString(),
+      amount: Math.round(Number(amount) * 100), // convert to paise
       currency: "INR",
-      amount: amount * 100, // amount in paisa
-      merchantIpAddress: req.ip || "127.0.0.1",
-      mode: 0,
-      purpose: "SALE",
-      productDescription: "Order Payment",
-      txnDate,
-      zpPayOption: 1,
-      returnUrl,
+      returnUrl: callbackUrl,
+      mode: "0", // 0 = LIVE, 1 = TEST
+      purpose: "Order Payment",
+      productDescription: "Ecommerce Order Payment",
+      txnDate: new Date().toISOString(),
+      buyerEmail: req.user?.email || "test@example.com",
+      buyerPhoneNumber: req.user?.mobile || "9999999999",
+      buyerFirstName: req.user?.firstName || "John",
+      buyerLastName: req.user?.lastName || "Doe",
     };
 
     const checksum = generateChecksum(params);
-    params.checksum = checksum;
 
-    // Save order in DB with status "pending"
-    await Order.create({
-      orderId,
-      amount,
-      email,
-      mobile,
-      status: "pending",
-      txnDate,
-    });
-
-    return res.json({
+    res.json({
       success: true,
-      endpoint,
-      params,
+      paymentUrl: endpoint,
+      params: { ...params, checksum },
     });
-  } catch (error) {
-    console.error("Zaakpay Payment Error:", error);
-    res.status(500).json({ success: false, message: "Payment initiation failed" });
+  } catch (err) {
+    console.error("Zaakpay Payment Error:", err);
+    res.status(500).json({ success: false, error: err.message });
   }
 };
 
-export const handleCallback = async (req, res) => {
+// 🔹 Step 2: Callback from ZaakPay
+export const paymentCallback = async (req, res) => {
   try {
     const response = req.body;
-    const { checksum, responseCode, orderId } = response;
+    const { orderId, responseCode, responseMsg, checksum } = response;
 
-    // Verify checksum
-    const receivedChecksum = checksum;
-    delete response.checksum;
-    const calculatedChecksum = generateChecksum(response);
+    // ✅ Verify checksum
+    const { checksum: _, ...dataToVerify } = response;
+    const calculatedChecksum = generateChecksum(dataToVerify);
 
-    if (receivedChecksum !== calculatedChecksum) {
-      console.error("Checksum mismatch for order:", orderId);
-      return res.status(400).send("Checksum mismatch");
+    if (checksum !== calculatedChecksum) {
+      return res.status(400).json({ success: false, message: "Checksum mismatch" });
     }
 
-    const order = await Order.findOne({ orderId });
-    if (!order) return res.status(404).send("Order not found");
+    // ✅ Update order
+    await Order.findByIdAndUpdate(orderId, {
+      paymentStatus: responseCode === "100" ? "completed" : "failed",
+      paymentResponse: response,
+    });
 
-    if (responseCode === "100") {
-      console.log(`✅ Payment Success for Order ${orderId}`);
-      order.status = "paid";
-    } else {
-      console.log(`❌ Payment Failed for Order ${orderId}`);
-      order.status = "failed";
-    }
-
-    await order.save();
-    return res.status(200).send("OK");
-  } catch (error) {
-    console.error("Zaakpay Callback Error:", error);
-    res.status(500).send("Callback error");
+    res.json({
+      success: responseCode === "100",
+      orderId,
+      message: responseMsg,
+      response,
+    });
+  } catch (err) {
+    console.error("Zaakpay Callback Error:", err);
+    res.status(500).json({ success: false, error: err.message });
   }
 };

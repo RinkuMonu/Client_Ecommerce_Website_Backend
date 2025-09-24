@@ -1,9 +1,9 @@
 import express from "express";
-import { initiatePayment, handleCallback } from "../controller/ZaakpayController.js";
+import { initiatePayment, paymentCallback } from "../controller/ZaakpayController.js";
 
 const router = express.Router();
 
 router.post("/pay", initiatePayment);
-router.post("/callback", handleCallback);
+router.post("/callback", paymentCallback);
 
 export default router;
