@@ -1,10 +1,93 @@
 import bcrypt from "bcryptjs";
 import dotenv from "dotenv";
 import User from "../models/User.model.js";
+import Order from "../models/Order.model.js";
+import Wishlist from "../models/Wishlist.model.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
+import { OAuth2Client } from "google-auth-library";
 
-dotenv.config({ path: "../.env" });
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+
+export const googleSignIn = async (req, res) => {
+  try {
+    const { idToken, referenceWebsite } = req.body;
+
+    if (!idToken || !referenceWebsite) {
+      return res.status(400).json({ msg: "idToken and referenceWebsite are required." });
+    }
+
+    // verify token
+    const ticket = await client.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    if (!payload) throw new Error("Invalid Google token");
+
+    const { sub: googleId, email, name, picture } = payload;
+    const nameParts = (name || "").split(" ");
+    const firstName = nameParts.shift() || "User";
+    const lastName = nameParts.join(" ") || "";
+
+    let user = await User.findOne({ email, referenceWebsite });
+
+    if (user) {
+      if (!user.googleId) {
+        user.googleId = googleId;
+        if (!user.avatar && picture) user.avatar = picture;
+        await user.save();
+      }
+    } else {
+      user = await User.create({
+        firstName,
+        lastName,
+        email,
+        referenceWebsite,
+        googleId,
+        avatar: picture,
+        role: "user",
+      });
+    }
+
+    // ensure user instance methods exist
+    if (!user.createAccessToken || !user.createRefreshToken) {
+      throw new Error("User token methods not defined");
+    }
+
+    const accessToken = user.createAccessToken();
+    const refreshToken = user.createRefreshToken();
+
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "Strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    res.cookie("accessToken", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "Strict",
+      maxAge: 2 * 24 * 60 * 60 * 1000,
+    });
+
+    user.password = undefined;
+
+    res.status(200).json({
+      userData: user,
+      msg: "Logged in with Google successfully",
+      accessToken,
+      refreshToken,
+    });
+  } catch (error) {
+    console.error("googleSignIn error:", error);
+    res.status(500).json({ msg: "Google sign-in failed", error: error.message });
+  }
+};
 
 export const registerUser = async (req, res) => {
   try {
@@ -298,64 +381,247 @@ export const logoutUser = (req, res) => {
   res.status(200).json({ message: "You have successfully logged out!" });
 };
 
+
+// export const getAllUsers = async (req, res) => {
+//   try {
+//     const { 
+//       page = 1, 
+//       limit = 10, 
+//       role, 
+//       segmentation, 
+//       search, 
+//       sortBy = "createdAt",   // default sort field
+//       sortOrder = "desc"      // "asc" or "desc"
+//     } = req.query;
+
+//     const skip = (page - 1) * limit;
+
+//     // Base pipeline
+//     let pipeline = [];
+
+//     // Optional role filter
+//     if (role) {
+//       pipeline.push({ $match: { role } });
+//     }
+
+//     // Optional search filter
+//     if (search) {
+//       pipeline.push({
+//         $match: {
+//           $or: [
+//             { firstName: { $regex: search, $options: "i" } },
+//             { lastName: { $regex: search, $options: "i" } },
+//             { email: { $regex: search, $options: "i" } },
+//             { mobile: { $regex: search, $options: "i" } },
+//           ],
+//         },
+//       });
+//     }
+
+//     // Lookup orders
+//     pipeline.push(
+//       {
+//         $lookup: {
+//           from: "orders",
+//           localField: "_id",
+//           foreignField: "customer", // assuming "customer" in orders refers to user._id
+//           as: "orders",
+//         },
+//       },
+//       {
+//         $addFields: {
+//           orderCount: { $size: "$orders" },
+//           totalSpent: {
+//             $sum: {
+//               $map: {
+//                 input: "$orders",
+//                 as: "order",
+//                 in: "$$order.totalAmount",
+//               },
+//             },
+//           },
+//         },
+//       }
+//     );
+
+//     // Segmentation logic
+//     const tenDaysAgo = new Date();
+//     tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
+
+//     if (segmentation) {
+//       if (segmentation === "loyal") {
+//         pipeline.push({ $match: { orderCount: { $gte: 10 } } });
+//       } else if (segmentation === "high-value") {
+//         pipeline.push({ $match: { totalSpent: { $gte: 5000 } } });
+//       } else if (segmentation === "new") {
+//         pipeline.push({ $match: { createdAt: { $gte: tenDaysAgo } } });
+//       } else if (segmentation === "regular") {
+//         pipeline.push({
+//           $match: {
+//             orderCount: { $lt: 10 },
+//             totalSpent: { $lt: 5000 },
+//             createdAt: { $lt: tenDaysAgo },
+//           },
+//         });
+//       }
+//     }
+
+//     // Add computed segment field
+//     pipeline.push({
+//       $addFields: {
+//         segment: {
+//           $switch: {
+//             branches: [
+//               { case: { $gte: ["$orderCount", 10] }, then: "loyal" },
+//               { case: { $gte: ["$totalSpent", 5000] }, then: "high-value" },
+//               { case: { $gte: ["$createdAt", tenDaysAgo] }, then: "new" },
+//             ],
+//             default: "regular",
+//           },
+//         },
+//       },
+//     });
+
+//     // Sorting
+//     const sortDirection = sortOrder === "asc" ? 1 : -1;
+//     pipeline.push({ $sort: { [sortBy]: sortDirection } });
+
+//     // Total count pipeline
+//     const totalPipeline = [...pipeline, { $count: "total" }];
+//     const totalResult = await User.aggregate(totalPipeline);
+//     const totalUsers = totalResult[0]?.total || 0;
+
+//     // Pagination
+//     pipeline.push({ $skip: parseInt(skip) }, { $limit: parseInt(limit) });
+
+//     const users = await User.aggregate(pipeline);
+
+//     res.status(200).json({
+//       success: true,
+//       totalUsers,
+//       page: parseInt(page),
+//       totalPages: Math.ceil(totalUsers / limit),
+//       users,
+//     });
+//   } catch (error) {
+//     console.error("Error fetching users:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Error fetching users",
+//       error: error.message,
+//     });
+//   }
+// };
+
+
 export const getAllUsers = async (req, res) => {
   try {
-    const {
-      referenceWebsite, // Array of ObjectIds
-      search,
-      sortField = "firstName",
-      sortOrder = "asc",
-      page = 1,
-      limit = 10,
-      role,
+    const { 
+      page = 1, 
+      limit = 10, 
+      role, 
+      segmentation, 
+      search, 
+      sortBy = "createdAt",   // default sort field
+      sortOrder = "desc"      // "asc" or "desc"
     } = req.query;
 
-    const pageNumber = parseInt(page, 10) || 1;
-    const pageSize = parseInt(limit, 10) || 10;
-    const skip = (pageNumber - 1) * pageSize;
-    const filter = {};
-    if (referenceWebsite) {
-      filter.referenceWebsite = {
-        $in: referenceWebsite
-          .split(",")
-          .map((id) => new mongoose.Types.ObjectId(id)),
-      };
-    }
+    const skip = (page - 1) * limit;
+
+    let pipeline = [];
+
     if (role) {
-      filter.role = role;
+      pipeline.push({ $match: { role } });
     }
+
     if (search) {
-      const regex = new RegExp(search, "i"); // Case-insensitive search
-      filter.$or = [
-        { firstName: regex },
-        { lastName: regex },
-        { email: regex },
-      ];
+      pipeline.push({
+        $match: {
+          $or: [
+            { firstName: { $regex: search, $options: "i" } },
+            { lastName: { $regex: search, $options: "i" } },
+            { email: { $regex: search, $options: "i" } },
+            { mobile: { $regex: search, $options: "i" } },
+          ],
+        },
+      });
     }
-    const sortOptions = { [sortField]: sortOrder === "asc" ? 1 : -1 };
-    const users = await User.find(filter)
-      .sort(sortOptions)
-      .skip(skip)
-      .limit(pageSize)
-      .select("-password"); // Exclude the password field
-    const totalUsers = await User.countDocuments(filter);
-    if (!users || users.length === 0) {
-      return res.status(404).json({ msg: "No users found" });
+
+    const tenDaysAgo = new Date();
+    tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
+
+    pipeline.push(
+      {
+        $lookup: {
+          from: "orders",
+          localField: "_id",
+          foreignField: "customer",
+          as: "orders",
+        },
+      },
+      {
+        $addFields: {
+          orderCount: { $size: "$orders" },
+          totalSpent: {
+            $sum: {
+              $map: {
+                input: "$orders",
+                as: "order",
+                in: "$$order.totalAmount",
+              },
+            },
+          },
+        },
+      },
+      {
+        $addFields: {
+          segment: {
+            $switch: {
+              branches: [
+                { case: { $gte: [ "$orderCount", 10 ] }, then: "loyal" },
+                { case: { $gte: [ "$totalSpent", 5000 ] }, then: "high-value" },
+                { case: { $gte: [ "$createdAt", tenDaysAgo ] }, then: "new" }
+              ],
+              default: "regular"
+            }
+          }
+        }
+      }
+    );
+
+    if (segmentation) {
+      pipeline.push({ $match: { segment: segmentation } });
     }
+
+    const sortDirection = sortOrder === "asc" ? 1 : -1;
+    pipeline.push({ $sort: { [sortBy]: sortDirection } });
+
+    const totalPipeline = [...pipeline, { $count: "total" }];
+    const totalResult = await User.aggregate(totalPipeline);
+    const totalUsers = totalResult[0]?.total || 0;
+
+    pipeline.push({ $skip: parseInt(skip) }, { $limit: parseInt(limit) });
+
+    const users = await User.aggregate(pipeline);
+
     res.status(200).json({
-      total: totalUsers,
-      page: pageNumber,
-      limit: pageSize,
-      totalPages: Math.ceil(totalUsers / pageSize),
-      data: users,
+      success: true,
+      totalUsers,
+      page: parseInt(page),
+      totalPages: Math.ceil(totalUsers / limit),
+      users,
     });
   } catch (error) {
-    console.error(`Error fetching users: ${error.message}`);
-    res
-      .status(500)
-      .json({ msg: "Failed to fetch users", error: error.message });
+    console.error("Error fetching users:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching users",
+      error: error.message,
+    });
   }
 };
+
+
 
 export const requestPasswordReset = async (req, res) => {
   try {
@@ -427,3 +693,4 @@ export const resetPassword = async (req, res) => {
     res.status(500).json({ msg: "Failed to reset password." });
   }
 };
+

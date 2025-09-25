@@ -1,5 +1,7 @@
 import CouponModel from "../models/Coupon.model.js";
 import Product from "../models/Product.model.js";
+import Order from "../models/Order.model.js";
+import ProductCategory from "../models/Catergroy.model.js";
 import mongoose from "mongoose";
 
 // /api/product/search?query=saree under 400&page=1&limit=20
@@ -132,7 +134,7 @@ export const createProduct = async (req, res) => {
       description,
       size: parsedSizes,
       material,
-      stock,
+      stock: Number(stock),
       discount: Number(discount),
       addedBy: req.user?.id?.toString(),
     });
@@ -199,6 +201,7 @@ export const getProducts = async (req, res) => {
       limit = 100,
       newArrival, // ✅ added
       material,
+      stock,
     } = req.query;
 
     if (!referenceWebsite) {
@@ -227,7 +230,6 @@ export const getProducts = async (req, res) => {
     // Flatten the joined category array
     pipeline.push({ $unwind: "$category" });
 
-
     pipeline.push({
       $lookup: {
         from: "coupons",
@@ -243,7 +245,6 @@ export const getProducts = async (req, res) => {
         preserveNullAndEmptyArrays: true,
       },
     });
-
 
     // Match by category name (case-insensitive)
     if (search) {
@@ -261,6 +262,22 @@ export const getProducts = async (req, res) => {
           material: { $regex: new RegExp(material, "i") },
         },
       });
+    }
+    // ✅ Filter by stock (Number)
+    if (stock) {
+      if (stock === "in") {
+        pipeline.push({
+          $match: { stock: { $gte: 5 } }, // stock ≥ 5 → In Stock
+        });
+      } else if (stock === "out") {
+        pipeline.push({
+          $match: { stock: { $lt: 5 } }, // stock < 5 → Out of Stock
+        });
+      } else {
+        pipeline.push({
+          $match: { stock: parseInt(stock) }, // Exact match e.g. stock=10
+        });
+      }
     }
 
     // Match by category name (case-insensitive)
@@ -486,12 +503,14 @@ export const getProductDetail = async (req, res) => {
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
-    res.status(200)
+    res
+      .status(200)
       .json({ message: "Product retrieved successfully", product });
   } catch (error) {
     console.log(error);
 
-    res.status(500)
+    res
+      .status(500)
       .json({ message: "Failed to retrieve product", error: error.message });
   }
 };
@@ -571,7 +590,7 @@ export const updateProduct = async (req, res) => {
         size: parsedSizes,
         discount,
         material,
-        stock,
+        stock: Number(stock),
       },
       { new: true }
     );
@@ -607,33 +626,117 @@ export const deleteProduct = async (req, res) => {
 };
 
 // apply-coupon
+// export const applyCouponOnProduct = async (req, res) => {
+//   try {
+//     const productId = req.params.id;
+//     const { couponId } = req.body;
+
+//     const coupon = await CouponModel.findById(couponId);
+//     if (!coupon) {
+//       return res
+//         .status(404)
+//         .json({ success: false, message: "Coupon not found" });
+//     }
+
+//     if (!coupon.isActive) {
+//       return res
+//         .status(400)
+//         .json({ success: false, message: "Coupon is inactive" });
+//     }
+//     const startDate = new Date(coupon.startDate);
+//     const endDate = new Date(coupon.endDate);
+
+//     // const now = new Date();
+//     // if (now < startDate) {
+//     //   return res.status(400).json({ success: false, message: "Coupon is not yet valid" });
+//     // }
+//     // if (now > endDate) {
+//     //   return res.status(400).json({ success: false, message: "Coupon has expired" });
+//     // }
+
+//     const product = await Product.findByIdAndUpdate(
+//       productId,
+//       { coupon: coupon._id },
+//       { new: true }
+//     ).populate("coupon");
+
+//     if (!product) {
+//       return res
+//         .status(404)
+//         .json({ success: false, message: "Product not found" });
+//     }
+
+//     res.json({
+//       success: true,
+//       message: "Coupon applied successfully",
+//       data: product,
+//     });
+//   } catch (error) {
+//     res.status(500).json({ success: false, message: error.message });
+//   }
+// };
+
 export const applyCouponOnProduct = async (req, res) => {
+  console.log("hitttt apply");
+
   try {
     const productId = req.params.id;
     const { couponId } = req.body;
 
+    if (couponId == "none") {
+      const product = await Product.findByIdAndUpdate(
+        productId,
+        { $unset: { coupon: "" } }, // remove coupon field
+        { new: true }
+      );
+
+      if (!product) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Product not found" });
+      }
+
+      await CouponModel.updateMany(
+        { applicableProducts: productId },
+        { $pull: { applicableProducts: productId } }
+      );
+
+      return res.json({
+        success: true,
+        message: "Coupon removed successfully",
+        data: product,
+      });
+    }
 
     const coupon = await CouponModel.findById(couponId);
     if (!coupon) {
-      return res.status(404).json({ success: false, message: "Coupon not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Coupon not found" });
     }
-
 
     if (!coupon.isActive) {
-      return res.status(400).json({ success: false, message: "Coupon is inactive" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Coupon is inactive" });
     }
+
     const startDate = new Date(coupon.startDate);
     const endDate = new Date(coupon.endDate);
+    const now = new Date();
 
-    // const now = new Date();
-    // if (now < startDate) {
-    //   return res.status(400).json({ success: false, message: "Coupon is not yet valid" });
-    // }
-    // if (now > endDate) {
-    //   return res.status(400).json({ success: false, message: "Coupon has expired" });
-    // }
+    if (now < startDate) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Coupon is not yet valid" });
+    }
+    if (now > endDate) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Coupon has expired" });
+    }
 
-
+    // ✅ Apply coupon to product
     const product = await Product.findByIdAndUpdate(
       productId,
       { coupon: coupon._id },
@@ -641,17 +744,270 @@ export const applyCouponOnProduct = async (req, res) => {
     ).populate("coupon");
 
     if (!product) {
-      return res.status(404).json({ success: false, message: "Product not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found" });
     }
+
+    // ✅ Update coupon with product
+    await CouponModel.findByIdAndUpdate(
+      couponId,
+      { $addToSet: { applicableProducts: productId } },
+      { new: true }
+    );
 
     res.json({
       success: true,
       message: "Coupon applied successfully",
-      data: product
+      data: product,
     });
-
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
+export const getTopSellingProducts = async (req, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // Base pipeline (before pagination)
+    const basePipeline = [
+      {
+        $match: {
+          status: "delivered", // only delivered orders
+          paymentStatus: "completed", // payment completed
+        },
+      },
+      { $unwind: "$products" },
+      {
+        $group: {
+          _id: "$products.product",
+          totalOrders: { $sum: 1 },
+          totalQuantity: { $sum: "$products.quantity" },
+        },
+      },
+      {
+        $match: {
+          totalOrders: { $gte: 3 }, // ✅ at least 3 completed orders
+        },
+      },
+    ];
+
+    // Count total documents
+    const countPipeline = [...basePipeline, { $count: "totalDocuments" }];
+    const countResult = await Order.aggregate(countPipeline);
+    const totalDocuments = countResult[0]?.totalDocuments || 0;
+    const totalPages = Math.ceil(totalDocuments / parseInt(limit));
+
+    // Full pipeline with sorting + lookup + pagination
+    const pipeline = [
+      ...basePipeline,
+      { $sort: { totalOrders: -1 } },
+      {
+        $lookup: {
+          from: "products",
+          localField: "_id",
+          foreignField: "_id",
+          as: "productDetails",
+        },
+      },
+      { $unwind: "$productDetails" },
+      { $skip: skip },
+      { $limit: parseInt(limit) },
+    ];
+
+    const topProducts = await Order.aggregate(pipeline);
+
+    res.status(200).json({
+      success: true,
+      message: "Top selling products retrieved successfully",
+      topProducts,
+      pagination: {
+        totalDocuments,
+        totalPages,
+        currentPage: parseInt(page),
+        pageSize: parseInt(limit),
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching top selling products:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch top selling products",
+      error: error.message,
+    });
+  }
+};
+
+export const getTopSellingCategories = async (req, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const basePipeline = [
+      { $match: { status: "delivered", paymentStatus: "completed" } },
+      { $unwind: "$products" },
+      {
+        $lookup: {
+          from: "products",
+          localField: "products.product",
+          foreignField: "_id",
+          as: "productDetails",
+        },
+      },
+      { $unwind: "$productDetails" },
+      {
+        $group: {
+          _id: "$productDetails.category", // group by category id
+          totalOrders: { $sum: 1 },        // number of orders containing this category
+        },
+      },
+    ];
+
+    // Count total categories
+    const countPipeline = [...basePipeline, { $count: "totalDocuments" }];
+    const countResult = await Order.aggregate(countPipeline);
+    const totalDocuments = countResult[0]?.totalDocuments || 0;
+    const totalPages = Math.ceil(totalDocuments / parseInt(limit));
+
+    // Main query with pagination + category lookup
+    const pipeline = [
+      ...basePipeline,
+      { $sort: { totalOrders: -1 } },
+      {
+        $lookup: {
+          from: "productcategories", // join with categories collection
+          localField: "_id",
+          foreignField: "_id",
+          as: "categoryDetails",
+        },
+      },
+      { $unwind: "$categoryDetails" },
+      {
+        $project: {
+          _id: 0,
+          categoryName: "$categoryDetails.name",
+          totalOrders: 1,
+        },
+      },
+      { $skip: skip },
+      { $limit: parseInt(limit) },
+    ];
+
+    const topCategories = await Order.aggregate(pipeline);
+
+    res.status(200).json({
+      success: true,
+      message: "Top selling categories retrieved successfully",
+      topCategories,
+      pagination: {
+        totalDocuments,
+        totalPages,
+        currentPage: parseInt(page),
+        pageSize: parseInt(limit),
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching top selling categories:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch top selling categories",
+      error: error.message,
+    });
+  }
+};
+
+export const toggleDealOfTheDayHourly = async (req, res) => {
+  try {
+    const productId = req.params.id;
+    const durationInHours = req.body.duration || 1; // default 1 hour if not passed
+
+    const product = await Product.findById(productId);
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    const now = new Date();
+
+    // If product already has an active deal, check expiry
+    if (product.dealOfTheDay && product.dealExpiresAt) {
+      if (now < product.dealExpiresAt) {
+        // Deal is still active
+        return res.status(200).json({
+          success: true,
+          message: `Deal is already ACTIVE until ${product.dealExpiresAt.toLocaleString()}`,
+          product,
+        });
+      } else {
+        // Expired → deactivate
+        product.dealOfTheDay = false;
+        product.dealActivatedAt = null;
+        product.dealExpiresAt = null;
+        await product.save();
+
+        return res.status(200).json({
+          success: true,
+          message: "Previous deal expired. Product is now INACTIVE.",
+          product,
+        });
+      }
+    }
+
+    // If inactive → activate a new deal for given duration
+    const expiry = new Date(now.getTime() + durationInHours * 60 * 60 * 1000);
+
+    product.dealOfTheDay = true;
+    product.dealActivatedAt = now;
+    product.dealExpiresAt = expiry;
+
+    await product.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Deal of the Day is now ACTIVE for ${durationInHours} hour(s), until ${expiry.toLocaleString()}`,
+      product,
+    });
+  } catch (error) {
+    console.error("Error toggling hourly deal:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to toggle hourly deal",
+      error: error.message,
+    });
+  }
+};
+
+
+export const getDealOfTheDayProducts = async (req, res) => {
+  try {
+    const now = new Date();
+
+    // Find products where dealOfTheDay is true AND dealExpiresAt is in the future
+    const activeDeals = await Product.find({
+      dealOfTheDay: true,
+      dealExpiresAt: { $gt: now },
+    });
+
+    // Optional: Auto-clean expired deals (set them inactive if expired)
+    await Product.updateMany(
+      { dealOfTheDay: true, dealExpiresAt: { $lte: now } },
+      { $set: { dealOfTheDay: false, dealActivatedAt: null, dealExpiresAt: null } }
+    );
+
+    res.status(200).json({
+      success: true,
+      count: activeDeals.length,
+      products: activeDeals,
+    });
+  } catch (error) {
+    console.error("Error fetching deal of the day products:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch deal of the day products",
+      error: error.message,
+    });
+  }
+};

@@ -20,10 +20,16 @@ import vendorRoutes from "./src/routes/vendor.routes.js";
 import { isAdmin } from "./src/middleware/isAdmin.js";
 import bannerRoutes from "./src/routes/banner.rotes.js";
 import review from "./src/routes/review.route.js";
-import couponRoutes from "./src/routes/coupon.router.js";
 import salesRouter from "./src/routes/sales.router.js";
+import newsletter from "./src/routes/newsletter.Routes.js";
+import coupon from "./src/routes/coupon.router.js";
+import faqRoutes from "./src/routes/faq.routes.js";
+import zaakpayRoutes from "./src/routes/ZaakpayRoutes.js";
+
 
 dotenv.config();
+
+console.log("GOOGLE_CLIENT_ID:", process.env.GOOGLE_CLIENT_ID); 
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -39,6 +45,7 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(
   cors({
     origin: [
+      "http://localhost:5174",
       "http://localhost:5175",
       "http://localhost:4002",
       "https://yourfrontenddomain.com",
@@ -67,12 +74,16 @@ app.use("/api/order", orderRoutes);
 app.use("/api/policy", policyRoutes);
 app.use("/api/banners", bannerRoutes);
 app.use("/api/sendreview", review);
+app.use("/api/newsletter", newsletter);
 
 app.post("/api/phonepe-payment", phonePeController);
 app.get("/api/dashboard", isAdmin, getDashboardData);
 app.use("/api", vendorRoutes);
-app.use('/api/coupons', couponRoutes);
-app.use("/api/salesOverview", salesRouter);
+app.use("/api/coupons", coupon);
+app.use("/api/pay", zaakpayRoutes);
+
+app.use("/api/faqs", faqRoutes);
+
 
 // 67888fb90e1c6b678401302d
 

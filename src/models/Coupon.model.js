@@ -1,80 +1,83 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
-const couponSchema = new mongoose.Schema({
+const couponSchema = new mongoose.Schema(
+  {
     code: {
-        type: String,
-        required: true,
-        unique: true,
-        uppercase: true,
-        trim: true
+      type: String,
+      required: true,
+      unique: true,
+      uppercase: true,
     },
     discountType: {
-        type: String,
-        required: true,
-        enum: ['percentage', 'fixed']
+      type: String,
+      enum: ["percentage", "fixed"], // % ya fixed amount
+      required: true,
     },
     discountValue: {
-        type: Number,
-        required: true,
-        min: 0
+      type: Number,
+      required: true,
     },
-    minOrderAmount: {
-        type: Number,
-        default: 0,
-        min: 0
-    },
-    maxDiscountAmount: {
-        type: Number,
-        min: 0
+    minimumOrderValue: {
+      type: Number,
+      default: 0, // optional
     },
     startDate: {
-        type: Date,
-        required: true
+      type: Date,
+      required: true,
     },
-    endDate: {
-        type: Date,
-        required: true
+    expiryDate: {
+      type: Date,
+      required: true,
     },
-    usageLimit: {
-        type: Number,
-        min: 1
-    },
-    isActive: {
-        type: Boolean,
-        default: true
-    },
-    applicableProducts: {
-        type: String,
-        enum: ['all', 'specific', 'category'],
-        default: 'all'
-    },
-    productIds: [{
+
+    // ✅ Coupon kis product par valid hai
+    applicableProducts: [
+      {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Product'
-    }],
-    referenceWebsite: {
-        type: String,
-        required: true
+        ref: "Product",
+      },
+    ],
+
+    // ✅ Coupon kis user ke liye valid hai
+    applicableUsers: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+
+    // ✅ Limit control
+    usageLimit: {
+      type: Number,
+      default: 1, // max total times coupon can be used
     },
-    createdAt: {
-        type: Date,
-        default: Date.now
+    perUserLimit: {
+      type: Number,
+      default: 1, // ek user max kitni baar use kar sakta hai
     },
-    updatedAt: {
-        type: Date,
-        default: Date.now
-    }
-});
 
-// Index for faster querying
-couponSchema.index({ code: 1, referenceWebsite: 1 }, { unique: true });
-couponSchema.index({ referenceWebsite: 1, isActive: 1, startDate: 1, endDate: 1 });
+    // ✅ Track total usage
+    totalUsed: {
+      type: Number,
+      default: 0,
+    },
 
-// Pre-save hook to uppercase the code
-couponSchema.pre('save', function (next) {
-    this.code = this.code.toUpperCase();
-    this.updatedAt = Date.now();
-    next();
-});
+    // ✅ Track per user usage
+    userUsage: [
+      {
+        user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        state: { type: String, enum: ["applied", "used"], default: "applied" },
+        appliedAt: { type: Date, default: Date.now },
+        usedAt: { type: Date },
+      },
+    ],
 
-export default mongoose.model('Coupon', couponSchema);
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+  },
+  { timestamps: true }
+);
+
+export default mongoose.model("Coupon", couponSchema);

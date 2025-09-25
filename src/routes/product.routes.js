@@ -8,6 +8,10 @@ import {
   getProducts,
   searchProducts,
   updateProduct,
+  getTopSellingProducts,
+  getTopSellingCategories,
+  toggleDealOfTheDayHourly,
+  getDealOfTheDayProducts
 } from "../controller/Product.controller.js";
 import { isAdmin } from "../middleware/isAdmin.js";
 import { verifyToken } from "../middleware/verifyToken.js";
@@ -25,6 +29,9 @@ productRoutes.post(
 productRoutes.get("/getproducts", getProducts);
 productRoutes.get("/getproduct/:id", getProductDetail);
 productRoutes.get("/search", searchProducts);
+productRoutes.get("/topselling", getTopSellingProducts);
+productRoutes.get("/topsales", getTopSellingCategories);
+productRoutes.get("/deals", getDealOfTheDayProducts);
 
 productRoutes.delete("/delete/:id", isAdmin, deleteProduct);
 productRoutes.put(
@@ -33,6 +40,9 @@ productRoutes.put(
   isAdmin,
   updateProduct
 );
+
+ productRoutes.put("/deal/:id", toggleDealOfTheDayHourly);
+
 productRoutes.post("/addmany", createMultipleProducts);
 
 // apply-coupon 

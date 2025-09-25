@@ -37,8 +37,8 @@ const productSchema = new mongoose.Schema(
       trim: true,
     },
     stock: {
-      type: Boolean,
-      default: false,
+      type: Number,
+      default: 0,
     },
     size: [
       {
@@ -63,6 +63,18 @@ const productSchema = new mongoose.Schema(
     coupon: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Coupon",
+    },
+    dealOfTheDay: {
+      type: Boolean,
+      default: false,
+    },
+    dealActivatedAt: {
+      type: Date,
+      default: null,
+    },
+    dealExpiresAt: {
+      type: Date,
+      default: null,
     },
 
     addedBy: {

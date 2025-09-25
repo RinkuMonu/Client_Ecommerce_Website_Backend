@@ -1,5 +1,5 @@
 import express from "express";
-import { registerUser, logInUser, updateUserRole, editProfile, logoutUser, adminLogin, getAllUsers, getUserDetails, requestPasswordReset, resetPassword } from "../controller/auth.controller.js";
+import { registerUser, logInUser, updateUserRole, editProfile, logoutUser, adminLogin, getAllUsers, getUserDetails, requestPasswordReset, resetPassword, googleSignIn  } from "../controller/auth.controller.js";
 import { isAdmin } from "../middleware/isAdmin.js";
 import { verifyToken } from "../middleware/verifyToken.js";
 // import { requestPasswordReset, resetPassword } from "../controller/Product.controller.js";
@@ -19,6 +19,6 @@ authRoutes.get("/allusers", isAdmin, getAllUsers)
 authRoutes.put('/updateRole/:userId', isAdmin, updateUserRole);
 authRoutes.post('/request-reset', requestPasswordReset);
 authRoutes.post('/reset-password', resetPassword);
-
+authRoutes.post("/google", googleSignIn);
 
 export default authRoutes;
