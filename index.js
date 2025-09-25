@@ -55,6 +55,7 @@ app.use(
 
 
     ], // allow specific frontend domains
+    
     credentials: true, // allow cookies and headers like Authorization
   })
 );
