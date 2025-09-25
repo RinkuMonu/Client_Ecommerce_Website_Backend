@@ -55,9 +55,14 @@ const orderSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
+    // status: {
+    //   type: String,
+    //   enum: ["pending", "processing", "shipped", "delivered", "cancelled"],
+    //   default: "pending",
+    // },
     status: {
       type: String,
-      enum: ["pending", "processing", "shipped", "delivered", "cancelled"],
+      enum: ["pending", "processing", "shipped", "delivered", "cancelled", "paid", "failed"],
       default: "pending",
     },
     shippingAddress: {
@@ -68,6 +73,10 @@ const orderSchema = new mongoose.Schema(
       enum: ["pending", "completed", "failed"],
       default: "pending",
     },
+
+    pgTransId: { type: String },     // Payment gateway transaction id
+paymentMode: { type: String },   // e.g., "UPI", "CARD"
+bankid: { type: String }, 
     // isDeleted: {
     //   type: Boolean,
     //   default: false,
