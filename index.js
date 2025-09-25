@@ -39,14 +39,16 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(
   cors({
     origin: [
-      "http://localhost:5174",
+      "http://localhost:5175",
       "http://localhost:4002",
       "https://yourfrontenddomain.com",
       "https://jajamblockprints.com",
       "https://www.jajamblockprints.com",
       "https://admin.jajamblockprints.com",
       "https://spiral.fashion",
-      "https://www.spiral.fashion"
+      "https://www.spiral.fashion",
+      "https://qubitnexts.com/"
+
 
     ], // allow specific frontend domains
     credentials: true, // allow cookies and headers like Authorization
