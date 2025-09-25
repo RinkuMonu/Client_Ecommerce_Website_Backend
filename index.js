@@ -51,8 +51,11 @@ app.use(
       "https://admin.jajamblockprints.com",
       "https://spiral.fashion",
       "https://www.spiral.fashion",
-    ],
-    credentials: true,
+      "https://qubitnexts.com/"
+
+
+    ], // allow specific frontend domains
+    credentials: true, // allow cookies and headers like Authorization
   })
 );
 
