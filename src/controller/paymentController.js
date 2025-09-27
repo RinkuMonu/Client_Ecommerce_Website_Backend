@@ -9,7 +9,7 @@ export const initiatePayment = async (req, res) => {
     const params = {
       merchantIdentifier: "236e6378d80e492f95283a119417ef01",
       orderId,
-      returnUrl: "http://localhost:5007/api/payment/callback", // tumhara callback
+      returnUrl: "https://api.jajamblockprints.com/api/payment/callback", // tumhara callback
       buyerEmail: "test@test.com",
       buyerFirstName: "Rinku",
       buyerLastName: "Yadav",
@@ -39,11 +39,11 @@ export const initiatePayment = async (req, res) => {
         <body onload="document.forms[0].submit()">
           <form action="https://zaakstaging.zaakpay.com/transactD?v=8" method="post">
             ${Object.entries(params)
-              .map( 
-                ([key, value]) =>
-                  `<input type="hidden" name="${key}" value="${value}" />`
-              )
-              .join("\n")}
+        .map(
+          ([key, value]) =>
+            `<input type="hidden" name="${key}" value="${value}" />`
+        )
+        .join("\n")}
           </form>
         </body>
       </html>
@@ -56,27 +56,27 @@ export const initiatePayment = async (req, res) => {
 
 
 export const paymentCallback = async (req, res) => {
-    try {
-        const data = req.body;
-        console.log("🔁 Zaakpay Callback Response:", data);
+  try {
+    const data = req.body;
+    console.log("🔁 Zaakpay Callback Response:", data);
 
-        const receivedChecksum = data.checksum;
-        delete data.checksum; // verify ke liye hatao
+    const receivedChecksum = data.checksum;
+    delete data.checksum; // verify ke liye hatao
 
-        const isValid = verifyChecksum(data, receivedChecksum);
+    const isValid = verifyChecksum(data, receivedChecksum);
 
-        if (!isValid) {
-            return res.status(400).json({ status: "failed", message: "Checksum mismatch" });
-        }
-
-        res.json({
-            status: "success",
-            message: "Payment verified",
-            orderId: data.orderId,
-            txnStatus: data.txnStatus || "UNKNOWN",
-            data
-        });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
+    if (!isValid) {
+      return res.status(400).json({ status: "failed", message: "Checksum mismatch" });
     }
+
+    res.json({
+      status: "success",
+      message: "Payment verified",
+      orderId: data.orderId,
+      txnStatus: data.txnStatus || "UNKNOWN",
+      data
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 };
