@@ -7,7 +7,7 @@ export const initiatePayment = async (req, res) => {
   try {
     const orderId = "ORDER_" + Date.now(); // unique orderId
     const params = {
-      merchantIdentifier: "236e6378d80e492f95283a119417ef01",
+      merchantIdentifier: "b19e8f103bce406cbd3476431b6b7973",
       orderId,
       returnUrl: "https://api.jajamblockprints.com/api/payment/callback", // tumhara callback
       buyerEmail: "test@test.com",
@@ -31,7 +31,7 @@ export const initiatePayment = async (req, res) => {
     };
 
     // ✅ checksum generate karo
-    params.checksum = generateChecksum(params, "YOUR_SECRET_KEY");
+    params.checksum = generateChecksum(params, secretKey);
 
     // ✅ HTML return karo
     res.send(`

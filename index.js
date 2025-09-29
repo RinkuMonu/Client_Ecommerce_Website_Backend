@@ -55,7 +55,7 @@ app.use(
 
 
     ], // allow specific frontend domains
-    
+
     credentials: true, // allow cookies and headers like Authorization
   })
 );
@@ -76,7 +76,7 @@ app.use("/api/newsletter", newsletter);
 app.get("/api/dashboard", isAdmin, getDashboardData);
 app.use("/api", vendorRoutes);
 app.use("/api/coupons", coupon);
-app.use("/api/payment", payRoutes);
+app.use("/api/zaakpay", payRoutes);
 app.use("/api/faqs", faqRoutes);
 
 DBConnection();
