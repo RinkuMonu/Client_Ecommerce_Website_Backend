@@ -3,10 +3,10 @@ import { initiatePayment, paymentCallback } from "../controller/paymentControlle
 
 const router = express.Router();
 
-// initiate payment
-// router.post("/initiate", initiatePayment);
+// Test initiation with static values
 router.get("/initiate", initiatePayment);
-// callback from Zaakpay
+
+// Callback from Zaakpay (must be POST)
 router.post("/callback", paymentCallback);
 
 export default router;

@@ -2,94 +2,92 @@ import { generateChecksum, verifyChecksum } from "../../utils/checksum.js";
 
 export const initiatePayment = async (req, res) => {
   try {
-    // ✅ directly from process.env
+    // Static test values (replace with req.body later)
     const merchantId = process.env.ZAAKPAY_MERCHANT_ID;
     const secretKey = process.env.ZAAKPAY_SECRET_KEY;
     const callbackUrl = process.env.ZAAKPAY_CALLBACK_URL;
     const endpoint = process.env.ZAAKPAY_ENDPOINT;
 
-    console.log("🔍 initiatePayment ENV:", { merchantId, secretKey, callbackUrl, endpoint });
-
-    if (!secretKey || !merchantId || !callbackUrl) {
-      return res.status(500).json({
-        message: "Payment initiation failed",
-        error: "Missing merchantId, secretKey, or callbackUrl. Check your .env file."
-      });
-    }
-
     const orderId = "ORDER_" + Date.now();
-    const txnDate = new Date();
-    const formattedTxnDate = txnDate.toISOString().slice(0, 19).replace("T", " ");
 
-    const params = {
+    // Zaakpay expects full timestamp: YYYY-MM-DD HH:mm:ss
+    const txnDate = new Date().toISOString().replace("T", " ").split(".")[0];
+
+    // Build payload exactly as per docs
+    const payload = {
       merchantIdentifier: merchantId,
-      orderId,
+      showMobile: "true",
+      mode: "0",
       returnUrl: callbackUrl,
-      buyerEmail: "test@test.com",
-      buyerFirstName: "Rinku",
-      buyerLastName: "Yadav",
-      buyerAddress: "Connaught Place",
-      buyerCity: "Delhi",
-      buyerState: "Delhi",
-      buyerCountry: "India",
-      buyerPincode: "110001",
-      buyerPhoneNumber: "9876543210",
-      txnType: "1",
-      zpPayOption: "1",
-      mode: "1",
-      currency: "INR",
-      amount: "20000", // 200 INR
-      merchantIpAddress: "::1",
-      txnDate: formattedTxnDate,
-      purpose: "SALE",
-      productDescription: "Test Product",
+      orderDetail: {
+        orderId,
+        amount: "20000", // ₹200 in paisa (static)
+        currency: "INR",
+        productDescription: "Static Test Product",
+        email: "test@demo.com",
+        txnDate,
+      },
+      paymentInstrument: {
+        paymentMode: "netbanking", // static test
+        netbanking: { bankid: "HDF" }, // HDFC Bank code
+      },
     };
 
-    params.checksum = generateChecksum(params, secretKey);
+    // Convert to JSON string
+    const jsonString = JSON.stringify(payload);
 
+    // Generate checksum
+    const checksum = generateChecksum(jsonString, secretKey);
+
+    // Auto-submit form to Zaakpay
     res.send(`
       <html>
         <body onload="document.forms[0].submit()">
           <form action="${endpoint}" method="post">
-            ${Object.entries(params)
-              .map(([key, value]) => `<input type="hidden" name="${key}" value="${value}" />`)
-              .join("\n")}
+            <input type="hidden" name="data" value='${jsonString}' />
+            <input type="hidden" name="checksum" value="${checksum}" />
           </form>
         </body>
       </html>
     `);
   } catch (err) {
-    console.error("❌ Error in initiatePayment:", err.message);
-    res.status(500).json({ message: "Payment initiation failed", error: err.message });
+    console.error("❌ Error in initiatePayment:", err);
+    res.status(500).json({ error: err.message });
   }
 };
 
 export const paymentCallback = async (req, res) => {
   try {
-    // ✅ directly from process.env
     const secretKey = process.env.ZAAKPAY_SECRET_KEY;
 
-    const data = req.body;
-    console.log("🔁 Zaakpay Callback Response:", data);
+    // Zaakpay sends: data=<json_string>&checksum=<checksum>
+    const { data, checksum } = req.body;
 
-    const receivedChecksum = data.checksum;
-    delete data.checksum;
+    if (!data || !checksum) {
+      return res.status(400).json({ status: "failed", message: "Missing data or checksum" });
+    }
 
-    const isValid = verifyChecksum(data, receivedChecksum, secretKey);
+    // Verify checksum on raw JSON string
+    const isValid = verifyChecksum(data, checksum, secretKey);
 
     if (!isValid) {
       return res.status(400).json({ status: "failed", message: "Checksum mismatch" });
     }
 
+    // Parse the JSON payload
+    const parsedData = JSON.parse(data);
+    console.log("🔁 Callback Data:", parsedData);
+
+    // Respond with status
     res.json({
-      status: data.responseCode === "100" ? "success" : "failed",
-      orderId: data.orderId,
-      responseCode: data.responseCode,
-      responseDescription: data.responseDescription,
-      data,
+      status: parsedData.responseCode === "100" ? "success" : "failed",
+      orderId: parsedData.orderId,
+      responseCode: parsedData.responseCode,
+      responseDescription: parsedData.responseDescription,
+      data: parsedData,
     });
   } catch (err) {
-    console.error("❌ Error in paymentCallback:", err.message);
+    console.error("❌ Error in paymentCallback:", err);
     res.status(500).json({ error: err.message });
   }
 };
