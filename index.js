@@ -26,7 +26,15 @@ import newsletter from "./src/routes/newsletter.Routes.js";
 import coupon from "./src/routes/coupon.router.js";
 import faqRoutes from "./src/routes/faq.routes.js";
 import payRoutes from "./src/routes/payment.routes.js";
+import { config } from "./config.js";
 
+console.log("🔍 ENV CHECK:", {
+  merchantId: config.merchantId,
+  secretKey: config.secretKey,
+  callbackUrl: config.callbackUrl,
+  endpoint: config.endpoint,
+  port: config.port
+});
 
 console.log("GOOGLE_CLIENT_ID:", process.env.GOOGLE_CLIENT_ID);
 
