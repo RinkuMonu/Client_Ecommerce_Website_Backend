@@ -15,28 +15,28 @@ export const initiatePayment = async (req, res) => {
     // 🔹 Build payload as per curl example
     const payload = {
       merchantIdentifier: merchantId,
-      merchantIpAddress: "127.0.0.1", // static for now, replace with req.ip
+      merchantIpAddress: "127.0.0.1",
       showMobile: "true",
       mode: "0",
       returnUrl: callbackUrl,
       orderDetail: {
         orderId,
-        amount: "2000", // ₹20 (in paisa)
+        amount: "2000",
         currency: "INR",
         purpose: "1",
-        productDescription: "Upi P2m Collect",
+        productDescription: "UPI P2M Collect",
         email: "testuser@example.com",
         txnDate,
       },
       billingAddress: {
-        "first name": "Test_FirstName",
-        "last name": "Test_LastName",
+        firstName: "Test_FirstName",
+        lastName: "Test_LastName",
         address: "Sector 56",
         city: "Gurugram",
         state: "Haryana",
         country: "India",
         pincode: "122003",
-        "Phone Number": "9999999999",
+        phoneNumber: "9999999999",
       },
       shippingAddress: {
         address: "Sector 54",
@@ -47,8 +47,8 @@ export const initiatePayment = async (req, res) => {
       },
       paymentInstrument: {
         paymentMode: "UPI",
-        netbanking: {
-          bankid: "testvpa@upi", // static test UPI ID
+        upi: {
+          vpa: "testvpa@upi",
         },
       },
       debitorcredit: "upi",
