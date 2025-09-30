@@ -1,14 +1,10 @@
 import { config } from "../../config.js";
 import { generateChecksum, verifyChecksum } from "../../utils/checksum.js";
 
-const { merchantId, secretKey, callbackUrl, endpoint } = config;
-
-if (!merchantId) console.error("❌ ZAAKPAY_MERCHANT_ID missing");
-if (!secretKey) console.error("❌ ZAAKPAY_SECRET_KEY missing");
-if (!callbackUrl) console.error("❌ ZAAKPAY_CALLBACK_URL missing");
-
 export const initiatePayment = async (req, res) => {
   try {
+    const { merchantId, secretKey, callbackUrl, endpoint } = config; // ✅ yahan destructure
+
     if (!secretKey || !merchantId || !callbackUrl) {
       return res.status(500).json({
         message: "Payment initiation failed",
@@ -37,14 +33,13 @@ export const initiatePayment = async (req, res) => {
       zpPayOption: "1",
       mode: "1",
       currency: "INR",
-      amount: "20000", // paise = 200 INR
+      amount: "20000",
       merchantIpAddress: "::1",
       txnDate: formattedTxnDate,
       purpose: "SALE",
       productDescription: "Test Product",
     };
 
-    // ✅ generate checksum
     params.checksum = generateChecksum(params, secretKey);
 
     res.send(`
@@ -63,6 +58,8 @@ export const initiatePayment = async (req, res) => {
     res.status(500).json({ message: "Payment initiation failed", error: err.message });
   }
 };
+
+
 
 export const paymentCallback = async (req, res) => {
   try {
