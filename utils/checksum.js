@@ -1,13 +1,4 @@
-import { config } from "../config.js";
-
-if (!config.merchantId) {
-  console.error("❌ ZAAKPAY_MERCHANT_ID missing");
-}
 import crypto from "crypto";
-
-// const secretKey = "8bc8c997888f42cea0e2e82b958de393";
-
-const secretKey = process.env.ZAAKPAY_SECRET_KEY;
 
 export const generateChecksum = (params, secretKey) => {
   const keys = [
@@ -39,16 +30,16 @@ export const generateChecksum = (params, secretKey) => {
     if (params[k] !== undefined && params[k] !== null) {
       data += `'${params[k]}'`;
     } else {
-      data += "''"; // empty value bhi include karo
+      data += "''";
     }
   });
 
-  console.log("🔑 Checksum String =>", data); // 👈 yahan log aayega
+  console.log("🔑 Checksum String =>", data);
 
   return crypto.createHmac("sha256", secretKey).update(data).digest("hex");
 };
 
-export const verifyChecksum = (params, receivedChecksum) => {
+export const verifyChecksum = (params, receivedChecksum, secretKey) => {
   const keys = [
     "merchantIdentifier",
     "orderId",
@@ -56,7 +47,7 @@ export const verifyChecksum = (params, receivedChecksum) => {
     "responseDescription",
     "txnId",
     "amount",
-    "txnDate"
+    "txnDate",
   ];
 
   let data = "";

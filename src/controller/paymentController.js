@@ -50,8 +50,8 @@ export const initiatePayment = async (req, res) => {
         <body onload="document.forms[0].submit()">
           <form action="${endpoint}" method="post">
             ${Object.entries(params)
-              .map(([key, value]) => `<input type="hidden" name="${key}" value="${value}" />`)
-              .join("\n")}
+        .map(([key, value]) => `<input type="hidden" name="${key}" value="${value}" />`)
+        .join("\n")}
           </form>
         </body>
       </html>
