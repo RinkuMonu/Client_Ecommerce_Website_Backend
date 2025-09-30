@@ -1,9 +1,11 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import express from "express";
 import cors from "cors";
 import { DBConnection } from "./src/db.js";
 import cookieParser from "cookie-parser";
 import path from "path";
-import dotenv from "dotenv";
 
 import orderRoutes from "./src/routes/order.routes.js";
 import authRoutes from "./src/routes/auth.routes.js";
@@ -25,7 +27,6 @@ import coupon from "./src/routes/coupon.router.js";
 import faqRoutes from "./src/routes/faq.routes.js";
 import payRoutes from "./src/routes/payment.routes.js";
 
-dotenv.config();
 
 console.log("GOOGLE_CLIENT_ID:", process.env.GOOGLE_CLIENT_ID);
 

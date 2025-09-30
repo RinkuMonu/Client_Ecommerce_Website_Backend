@@ -1,36 +1,27 @@
+import { config } from "../../config.js";
 import { generateChecksum, verifyChecksum } from "../../utils/checksum.js";
 
-const merchantIdentifier = process.env.ZAAKPAY_MERCHANT_ID;
-const secretKey = process.env.ZAAKPAY_SECRET_KEY;
-const callbackUrl = process.env.ZAAKPAY_CALLBACK_URL;
+const { merchantId, secretKey, callbackUrl, endpoint } = config;
 
-if (!merchantIdentifier) {
-  console.error("❌ ZAAKPAY_MERCHANT_ID is not defined in .env");
-}
-
-if (!secretKey) {
-  console.error("❌ ZAAKPAY_SECRET_KEY is not defined in .env");
-}
-
-if (!callbackUrl) {
-  console.error("❌ ZAAKPAY_CALLBACK_URL is not defined in .env");
-}
+if (!merchantId) console.error("❌ ZAAKPAY_MERCHANT_ID missing");
+if (!secretKey) console.error("❌ ZAAKPAY_SECRET_KEY missing");
+if (!callbackUrl) console.error("❌ ZAAKPAY_CALLBACK_URL missing");
 
 export const initiatePayment = async (req, res) => {
   try {
-    if (!secretKey || !merchantIdentifier || !callbackUrl) {
+    if (!secretKey || !merchantId || !callbackUrl) {
       return res.status(500).json({
         message: "Payment initiation failed",
-        error: "Missing merchantIdentifier, secretKey, or callbackUrl. Check your .env file."
+        error: "Missing merchantId, secretKey, or callbackUrl. Check your .env file."
       });
     }
 
-    const orderId = "ORDER_" + Date.now(); // unique orderId
+    const orderId = "ORDER_" + Date.now();
     const txnDate = new Date();
     const formattedTxnDate = txnDate.toISOString().slice(0, 19).replace("T", " ");
 
     const params = {
-      merchantIdentifier,
+      merchantIdentifier: merchantId,
       orderId,
       returnUrl: callbackUrl,
       buyerEmail: "test@test.com",
@@ -46,20 +37,20 @@ export const initiatePayment = async (req, res) => {
       zpPayOption: "1",
       mode: "1",
       currency: "INR",
-      amount: "20000",
+      amount: "20000", // paise = 200 INR
       merchantIpAddress: "::1",
       txnDate: formattedTxnDate,
       purpose: "SALE",
       productDescription: "Test Product",
     };
 
-    // ✅ generate checksum safely
+    // ✅ generate checksum
     params.checksum = generateChecksum(params, secretKey);
 
     res.send(`
       <html>
         <body onload="document.forms[0].submit()">
-          <form action="${process.env.ZAAKPAY_ENDPOINT}" method="post">
+          <form action="${endpoint}" method="post">
             ${Object.entries(params)
               .map(([key, value]) => `<input type="hidden" name="${key}" value="${value}" />`)
               .join("\n")}
@@ -81,7 +72,8 @@ export const paymentCallback = async (req, res) => {
     const receivedChecksum = data.checksum;
     delete data.checksum;
 
-    const isValid = verifyChecksum(data, receivedChecksum);
+    // ✅ pass secretKey here
+    const isValid = verifyChecksum(data, receivedChecksum, secretKey);
 
     if (!isValid) {
       return res.status(400).json({ status: "failed", message: "Checksum mismatch" });
@@ -95,6 +87,7 @@ export const paymentCallback = async (req, res) => {
       data
     });
   } catch (err) {
+    console.error("❌ Error in paymentCallback:", err.message);
     res.status(500).json({ error: err.message });
   }
 };

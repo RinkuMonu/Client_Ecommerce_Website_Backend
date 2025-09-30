@@ -1,3 +1,8 @@
+import { config } from "../config.js";
+
+if (!config.merchantId) {
+  console.error("❌ ZAAKPAY_MERCHANT_ID missing");
+}
 import crypto from "crypto";
 
 // const secretKey = "8bc8c997888f42cea0e2e82b958de393";
