@@ -1,5 +1,4 @@
 import express from "express";
-import { config } from "../../config.js";
 import { initiatePayment, paymentCallback } from "../controller/paymentController.js";
 
 const router = express.Router();

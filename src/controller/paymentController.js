@@ -1,10 +1,12 @@
-import { config } from "../../config.js";
 import { generateChecksum, verifyChecksum } from "../../utils/checksum.js";
 
 export const initiatePayment = async (req, res) => {
   try {
-    // ✅ destructure inside function
-    const { merchantId, secretKey, callbackUrl, endpoint } = config;
+    // ✅ directly from process.env
+    const merchantId = process.env.ZAAKPAY_MERCHANT_ID;
+    const secretKey = process.env.ZAAKPAY_SECRET_KEY;
+    const callbackUrl = process.env.ZAAKPAY_CALLBACK_URL;
+    const endpoint = process.env.ZAAKPAY_ENDPOINT;
 
     console.log("🔍 initiatePayment ENV:", { merchantId, secretKey, callbackUrl, endpoint });
 
@@ -50,8 +52,8 @@ export const initiatePayment = async (req, res) => {
         <body onload="document.forms[0].submit()">
           <form action="${endpoint}" method="post">
             ${Object.entries(params)
-        .map(([key, value]) => `<input type="hidden" name="${key}" value="${value}" />`)
-        .join("\n")}
+              .map(([key, value]) => `<input type="hidden" name="${key}" value="${value}" />`)
+              .join("\n")}
           </form>
         </body>
       </html>
@@ -64,8 +66,8 @@ export const initiatePayment = async (req, res) => {
 
 export const paymentCallback = async (req, res) => {
   try {
-    // ✅ destructure here also
-    const { secretKey } = config;
+    // ✅ directly from process.env
+    const secretKey = process.env.ZAAKPAY_SECRET_KEY;
 
     const data = req.body;
     console.log("🔁 Zaakpay Callback Response:", data);
