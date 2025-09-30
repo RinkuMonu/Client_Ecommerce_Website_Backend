@@ -1,58 +1,83 @@
+import axios from "axios";
+import qs from "qs";
 import { generateChecksum, verifyChecksum } from "../../utils/checksum.js";
 
 export const initiatePayment = async (req, res) => {
   try {
-    // Static test values (replace with req.body later)
     const merchantId = process.env.ZAAKPAY_MERCHANT_ID;
     const secretKey = process.env.ZAAKPAY_SECRET_KEY;
     const callbackUrl = process.env.ZAAKPAY_CALLBACK_URL;
     const endpoint = process.env.ZAAKPAY_ENDPOINT;
 
     const orderId = "ORDER_" + Date.now();
+    const txnDate = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
 
-    // Zaakpay expects full timestamp: YYYY-MM-DD HH:mm:ss
-    const txnDate = new Date().toISOString().replace("T", " ").split(".")[0];
-
-    // Build payload exactly as per docs
+    // 🔹 Build payload as per curl example
     const payload = {
       merchantIdentifier: merchantId,
+      merchantIpAddress: "127.0.0.1", // static for now, replace with req.ip
       showMobile: "true",
       mode: "0",
       returnUrl: callbackUrl,
       orderDetail: {
         orderId,
-        amount: "20000", // ₹200 in paisa (static)
+        amount: "2000", // ₹20 (in paisa)
         currency: "INR",
-        productDescription: "Static Test Product",
-        email: "test@demo.com",
+        purpose: "1",
+        productDescription: "Upi P2m Collect",
+        email: "testuser@example.com",
         txnDate,
       },
-      paymentInstrument: {
-        paymentMode: "netbanking", // static test
-        netbanking: { bankid: "HDF" }, // HDFC Bank code
+      billingAddress: {
+        "first name": "Test_FirstName",
+        "last name": "Test_LastName",
+        address: "Sector 56",
+        city: "Gurugram",
+        state: "Haryana",
+        country: "India",
+        pincode: "122003",
+        "Phone Number": "9999999999",
       },
+      shippingAddress: {
+        address: "Sector 54",
+        city: "Gurugram",
+        state: "Haryana",
+        country: "India",
+        pincode: "122003",
+      },
+      paymentInstrument: {
+        paymentMode: "UPI",
+        netbanking: {
+          bankid: "testvpa@upi", // static test UPI ID
+        },
+      },
+      debitorcredit: "upi",
+      responseCode: "100",
+      responseDescription: "The transaction was completed successfully"
     };
 
-    // Convert to JSON string
+    // 🔹 Convert payload to JSON string
     const jsonString = JSON.stringify(payload);
 
-    // Generate checksum
+    // 🔹 Generate checksum
     const checksum = generateChecksum(jsonString, secretKey);
 
-    // Auto-submit form to Zaakpay
-    res.send(`
-      <html>
-        <body onload="document.forms[0].submit()">
-          <form action="${endpoint}" method="post">
-            <input type="hidden" name="data" value='${jsonString}' />
-            <input type="hidden" name="checksum" value="${checksum}" />
-          </form>
-        </body>
-      </html>
-    `);
+    // 🔹 Send request to Zaakpay TransactU
+    const response = await axios.post(
+      endpoint,
+      qs.stringify({ data: jsonString, checksum }),
+      { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
+    );
+
+    // 🔹 Return Zaakpay response to frontend
+    res.json({
+      message: "Payment initiation request sent",
+      orderId,
+      response: response.data,
+    });
   } catch (err) {
-    console.error("❌ Error in initiatePayment:", err);
-    res.status(500).json({ error: err.message });
+    console.error("❌ Error in initiatePayment:", err.response?.data || err.message);
+    res.status(500).json({ error: err.message, details: err.response?.data });
   }
 };
 
