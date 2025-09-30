@@ -3,7 +3,9 @@ import { generateChecksum, verifyChecksum } from "../../utils/checksum.js";
 
 export const initiatePayment = async (req, res) => {
   try {
-    const { merchantId, secretKey, callbackUrl, endpoint } = config; // ✅ yahan destructure
+    const { merchantId, secretKey, callbackUrl, endpoint } = config;
+
+    console.log("🔍 initiatePayment ENV:", { merchantId, secretKey, callbackUrl, endpoint });
 
     if (!secretKey || !merchantId || !callbackUrl) {
       return res.status(500).json({
@@ -47,8 +49,8 @@ export const initiatePayment = async (req, res) => {
         <body onload="document.forms[0].submit()">
           <form action="${endpoint}" method="post">
             ${Object.entries(params)
-              .map(([key, value]) => `<input type="hidden" name="${key}" value="${value}" />`)
-              .join("\n")}
+        .map(([key, value]) => `<input type="hidden" name="${key}" value="${value}" />`)
+        .join("\n")}
           </form>
         </body>
       </html>
@@ -59,17 +61,16 @@ export const initiatePayment = async (req, res) => {
   }
 };
 
-
-
 export const paymentCallback = async (req, res) => {
   try {
+    const { secretKey } = config;   // ✅ yahan destructure
+
     const data = req.body;
     console.log("🔁 Zaakpay Callback Response:", data);
 
     const receivedChecksum = data.checksum;
     delete data.checksum;
 
-    // ✅ pass secretKey here
     const isValid = verifyChecksum(data, receivedChecksum, secretKey);
 
     if (!isValid) {
