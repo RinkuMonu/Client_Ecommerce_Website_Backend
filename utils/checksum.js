@@ -1,7 +1,8 @@
 import crypto from "crypto";
 
-const secretKey = "8bc8c997888f42cea0e2e82b958de393";
+// const secretKey = "8bc8c997888f42cea0e2e82b958de393";
 
+const secretKey = process.env.ZAAKPAY_SECRET_KEY;
 
 export const generateChecksum = (params, secretKey) => {
   const keys = [

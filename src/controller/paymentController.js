@@ -2,6 +2,7 @@ import { generateChecksum, verifyChecksum } from "../../utils/checksum.js";
 
 const merchantIdentifier = process.env.ZAAKPAY_MERCHANT_ID;
 const secretKey = process.env.ZAAKPAY_SECRET_KEY;
+const callbackUrl = process.env.ZAAKPAY_CALLBACK_URL;
 
 export const initiatePayment = async (req, res) => {
   try {
@@ -12,7 +13,7 @@ export const initiatePayment = async (req, res) => {
     const params = {
       merchantIdentifier,
       orderId,
-      returnUrl: "https://api.jajamblockprints.com/api/payment/callback",
+      returnUrl: callbackUrl,
       buyerEmail: "test@test.com",
       buyerFirstName: "Rinku",
       buyerLastName: "Yadav",
@@ -40,13 +41,13 @@ export const initiatePayment = async (req, res) => {
     res.send(`
       <html>
         <body onload="document.forms[0].submit()">
-          <form action="https://api.zaakpay.com/transactD?v=5" method="post">
+          <form action="${process.env.ZAAKPAY_ENDPOINT}" method="post">
             ${Object.entries(params)
-              .map(
-                ([key, value]) =>
-                  `<input type="hidden" name="${key}" value="${value}" />`
-              )
-              .join("\n")}
+        .map(
+          ([key, value]) =>
+            `<input type="hidden" name="${key}" value="${value}" />`
+        )
+        .join("\n")}
           </form>
         </body>
       </html>
