@@ -3,6 +3,7 @@ import { generateChecksum, verifyChecksum } from "../../utils/checksum.js";
 
 export const initiatePayment = async (req, res) => {
   try {
+    // ✅ destructure inside function
     const { merchantId, secretKey, callbackUrl, endpoint } = config;
 
     console.log("🔍 initiatePayment ENV:", { merchantId, secretKey, callbackUrl, endpoint });
@@ -35,7 +36,7 @@ export const initiatePayment = async (req, res) => {
       zpPayOption: "1",
       mode: "1",
       currency: "INR",
-      amount: "20000",
+      amount: "20000", // 200 INR
       merchantIpAddress: "::1",
       txnDate: formattedTxnDate,
       purpose: "SALE",
@@ -49,8 +50,8 @@ export const initiatePayment = async (req, res) => {
         <body onload="document.forms[0].submit()">
           <form action="${endpoint}" method="post">
             ${Object.entries(params)
-        .map(([key, value]) => `<input type="hidden" name="${key}" value="${value}" />`)
-        .join("\n")}
+              .map(([key, value]) => `<input type="hidden" name="${key}" value="${value}" />`)
+              .join("\n")}
           </form>
         </body>
       </html>
@@ -63,7 +64,8 @@ export const initiatePayment = async (req, res) => {
 
 export const paymentCallback = async (req, res) => {
   try {
-    const { secretKey } = config;   // ✅ yahan destructure
+    // ✅ destructure here also
+    const { secretKey } = config;
 
     const data = req.body;
     console.log("🔁 Zaakpay Callback Response:", data);
@@ -82,7 +84,7 @@ export const paymentCallback = async (req, res) => {
       orderId: data.orderId,
       responseCode: data.responseCode,
       responseDescription: data.responseDescription,
-      data
+      data,
     });
   } catch (err) {
     console.error("❌ Error in paymentCallback:", err.message);
