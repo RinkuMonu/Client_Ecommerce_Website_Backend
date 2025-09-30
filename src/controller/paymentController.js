@@ -10,18 +10,20 @@ export const initiatePayment = async (req, res) => {
     const endpoint = process.env.ZAAKPAY_ENDPOINT;
 
     const orderId = "ORDER_" + Date.now();
-    const txnDate = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
 
-    // 🔹 Build payload as per curl example
+    // Zaakpay requires full timestamp: YYYY-MM-DD HH:mm:ss
+    const txnDate = new Date().toISOString().replace("T", " ").split(".")[0];
+
+    // 🔹 Build payload as per docs
     const payload = {
       merchantIdentifier: merchantId,
-      merchantIpAddress: "127.0.0.1",
+      merchantIpAddress: "127.0.0.1", // later replace with req.ip
       showMobile: "true",
       mode: "0",
       returnUrl: callbackUrl,
       orderDetail: {
         orderId,
-        amount: "2000",
+        amount: "2000", // in paisa (₹20)
         currency: "INR",
         purpose: "1",
         productDescription: "UPI P2M Collect",
@@ -48,12 +50,10 @@ export const initiatePayment = async (req, res) => {
       paymentInstrument: {
         paymentMode: "UPI",
         upi: {
-          vpa: "testvpa@upi",
+          vpa: "testvpa@upi", // test VPA
         },
       },
       debitorcredit: "upi",
-      responseCode: "100",
-      responseDescription: "The transaction was completed successfully"
     };
 
     // 🔹 Convert payload to JSON string
