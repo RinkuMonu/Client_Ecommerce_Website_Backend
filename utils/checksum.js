@@ -1,19 +1,50 @@
-// utils/checksum.js
 import crypto from "crypto";
+import { merchantInfo } from "../config.js";
 
-/**
- * Zaakpay checksum: HMAC-SHA256 over the entire JSON string in `data`.
- * @param {string} jsonString - JSON.stringify(payload)
- * @param {string} secretKey  - Zaakpay Secret Key
- */
-export function generateChecksum(jsonString, secretKey) {
-  return crypto.createHmac("sha256", secretKey).update(jsonString).digest("hex");
-}
+const secretkey = merchantInfo.secretKey;
 
-/**
- * Verify checksum by recalculating over the same `data` JSON string.
- */
-export function verifyChecksum(jsonString, receivedChecksum, secretKey) {
-  const calc = generateChecksum(jsonString, secretKey);
-  return calc === receivedChecksum;
-}
+const getChecksumString = (data) => {
+  const checksumsequence = [
+    "amount", "bankid", "buyerAddress", "buyerCity", "buyerCountry", "buyerEmail",
+    "buyerFirstName", "buyerLastName", "buyerPhoneNumber", "buyerPincode", "buyerState",
+    "currency", "debitorcredit", "merchantIdentifier", "merchantIpAddress", "mode", "orderId",
+    "product1Description", "product2Description", "product3Description", "product4Description",
+    "productDescription", "productInfo", "purpose", "returnUrl", "shipToAddress", "shipToCity",
+    "shipToCountry", "shipToFirstname", "shipToLastname", "shipToPhoneNumber", "shipToPincode",
+    "shipToState", "showMobile", "txnDate", "txnType", "zpPayOption"
+  ];
+
+  let checksumstring = "";
+  for (let key of checksumsequence) {
+    if (data[key] && data[key].toString() !== "") {
+      checksumstring += `${key}=${data[key]}&`;
+    }
+  }
+  return checksumstring;
+};
+
+
+const getResponseChecksumString = (data) => {
+  const checksumsequence = [
+    "amount", "bank", "bankid", "cardId", "cardScheme", "cardToken", "cardhashid",
+    "doRedirect", "orderId", "paymentMethod", "paymentMode", "responseCode",
+    "responseDescription", "productDescription", "product1Description", "product2Description",
+    "product3Description", "product4Description", "pgTransId", "pgTransTime"
+  ];
+
+  let checksumstring = "";
+  for (let key of checksumsequence) {
+    if (data[key]) {
+      checksumstring += `${key}=${data[key]}&`;
+    }
+  }
+  return checksumstring;
+};
+
+const calculateChecksum = (checksumstring) => {
+  const hmac = crypto.createHmac("sha256", secretkey);
+  hmac.update(checksumstring);
+  return hmac.digest("hex");
+};
+
+export default { getChecksumString, getResponseChecksumString, calculateChecksum };
