@@ -276,9 +276,9 @@ import { generateChecksum, verifyChecksum } from "../../utils/checksum.js";
 export async function initiatePayment(req, res) {
   try {
     const merchantIdentifier = process.env.ZAAKPAY_MERCHANT_ID;   // e.g. b19e...
-    const secretKey         = process.env.ZAAKPAY_SECRET_KEY;     // HMAC key
-    const callbackUrl       = process.env.ZAAKPAY_CALLBACK_URL;   // must match dashboard URL (domain/subdomain)
-    const endpoint          = process.env.ZAAKPAY_ENDPOINT || "https://zaakstaging.zaakpay.com/transactU?v=8";
+    const secretKey = process.env.ZAAKPAY_SECRET_KEY;     // HMAC key
+    const callbackUrl = process.env.ZAAKPAY_CALLBACK_URL;   // must match dashboard URL (domain/subdomain)
+    const endpoint = process.env.ZAAKPAY_ENDPOINT || "https://zaakstaging.zaakpay.com/transactU?v=8";
 
     const orderId = "ORDER_" + Date.now();
     const txnDate = new Date().toISOString().replace("T", " ").split(".")[0];
@@ -346,55 +346,55 @@ export async function initiatePayment(req, res) {
     // UPI COLLECT (bankid = VPA; debitorcredit = "upi")
     // ─────────────────────────────────────────────────────────────────────
 
-const upiPayload = {
-  merchantIdentifier,
-  merchantIpAddress: "127.0.0.1",
-  showMobile: "true",
-  mode: "0",
-  returnUrl: callbackUrl,
-  orderDetail: {
-    orderId,
-    amount: "2000", // paisa me (₹20)
-    currency: "INR",
-    purpose: "1",
-    productDescription: "UPI Collect Test",
-    email: "testupi@example.com",
-    txnDate
-  },
-  paymentInstrument: {
-    paymentMode: "UPI",
-    upi: { vpa: "testvpa@upi" }  // ✅ correct field
-  },
-  debitorcredit: "upi"
-};
+    const upiPayload = {
+      merchantIdentifier,
+      merchantIpAddress: "127.0.0.1",
+      showMobile: "true",
+      mode: "0",
+      returnUrl: callbackUrl,
+      orderDetail: {
+        orderId,
+        amount: "2000", // paisa me (₹20)
+        currency: "INR",
+        purpose: "1",
+        productDescription: "UPI Collect Test",
+        email: "testupi@example.com",
+        txnDate
+      },
+      paymentInstrument: {
+        paymentMode: "UPI",
+        upi: { vpa: "testvpa@upi" }  // ✅ correct field
+      },
+      debitorcredit: "upi"
+    };
 
     // ─────────────────────────────────────────────────────────────────────
     // WALLET (per docs, wallet also travels via netbanking.bankid code)
     // Example from docs shows Mobikwik "MW" as bankid for wallet
     // ─────────────────────────────────────────────────────────────────────
     const walletPayload = {
-  merchantIdentifier,
-  merchantIpAddress: "127.0.0.1",
-  showMobile: "true",
-  mode: "0",
-  returnUrl: callbackUrl,
-  orderDetail: {
-    orderId,
-    amount: "2000",
-    currency: "INR",
-    purpose: "1",
-    productDescription: "Wallet Test",
-    email: "testwallet@example.com",
-    phone: "8894451510",
-    txnDate
-  },
-  paymentInstrument: {
-    paymentMode: "wallet",
-    wallet: {
-      walletName: "paytm"   // ya mobikwik, freecharge etc. as per Zaakpay docs
-    }
-  }
-};
+      merchantIdentifier,
+      merchantIpAddress: "127.0.0.1",
+      showMobile: "true",
+      mode: "0",
+      returnUrl: callbackUrl,
+      orderDetail: {
+        orderId,
+        amount: "2000",
+        currency: "INR",
+        purpose: "1",
+        productDescription: "Wallet Test",
+        email: "testwallet@example.com",
+        phone: "8894451510",
+        txnDate
+      },
+      paymentInstrument: {
+        paymentMode: "wallet",
+        wallet: {
+          walletName: "paytm"   // ya mobikwik, freecharge etc. as per Zaakpay docs
+        }
+      }
+    };
 
     // Choose by query param (?mode=card|netbanking|upi|wallet)
     const mode = (req.query.mode || "upi").toLowerCase();
@@ -408,17 +408,27 @@ const upiPayload = {
 
     const zp = await axios.post(
       endpoint,
-      qs.stringify({ data, checksum }),
-      { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
+      qs.stringify({ request: data, checksum }),
+      {
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        responseType: "text",
+        maxRedirects: 0,                // 👈 prevent axios auto-follow
+        transformResponse: [(r) => r]
+      }
     );
 
-    // Return whatever Zaakpay sent — may contain doRedirect/postUrl/bankPostData etc.
+    // 👇 yaha log karo
+    console.log("Zaakpay status:", zp.status);
+    console.log("Zaakpay headers:", zp.headers);
+    console.log("Zaakpay raw data:", zp.data);
+
     res.status(200).json({
       success: true,
       mode: payload.paymentInstrument.paymentMode,
       orderId,
-      zaakpay: zp.data
+      zaakpay: zp.data || "No body returned from Zaakpay (staging)"
     });
+
   } catch (err) {
     const detail = err.response?.data || err.message;
     console.error("Zaakpay initiate error:", detail);
@@ -434,6 +444,7 @@ const upiPayload = {
  */
 export async function paymentCallback(req, res) {
   try {
+    console.log("Zaakpay Callback Raw Body:", req.body);
     const secretKey = process.env.ZAAKPAY_SECRET_KEY;
 
     // Zaakpay sends: data=<json>&checksum=<hex>
