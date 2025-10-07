@@ -1,21 +1,19 @@
+// utils/checksum.js
 import crypto from "crypto";
 
 /**
- * Generate checksum for Zaakpay
- * @param {string} jsonString - JSON string of payload
- * @param {string} secretKey - Merchant secret key
+ * Zaakpay checksum: HMAC-SHA256 over the entire JSON string in `data`.
+ * @param {string} jsonString - JSON.stringify(payload)
+ * @param {string} secretKey  - Zaakpay Secret Key
  */
-export const generateChecksum = (jsonString, secretKey) => {
+export function generateChecksum(jsonString, secretKey) {
   return crypto.createHmac("sha256", secretKey).update(jsonString).digest("hex");
-};
+}
 
 /**
- * Verify checksum received from Zaakpay
- * @param {string} jsonString - JSON string of payload
- * @param {string} receivedChecksum - Checksum received from Zaakpay
- * @param {string} secretKey - Merchant secret key
+ * Verify checksum by recalculating over the same `data` JSON string.
  */
-export const verifyChecksum = (jsonString, receivedChecksum, secretKey) => {
-  const calculated = crypto.createHmac("sha256", secretKey).update(jsonString).digest("hex");
-  return calculated === receivedChecksum;
-};
+export function verifyChecksum(jsonString, receivedChecksum, secretKey) {
+  const calc = generateChecksum(jsonString, secretKey);
+  return calc === receivedChecksum;
+}
