@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Zaakpay Payment Test</title>
+</head>
+
+<body onload="document.forms[0].submit()">
+    <form method="POST" action="https://zaakstaging.zaakpay.com/api/paymentTransact/V8">
+        <input type="hidden" name="merchantIdentifier" value="b19e8f103bce406cbd3476431b6b7973">
+        <input type="hidden" name="orderId" value="ZPTest_1760094072319">
+        <input type="hidden" name="amount" value="200">
+        <input type="hidden" name="currency" value="INR">
+        <input type="hidden" name="buyerEmail" value="abc@abc.com">
+        <input type="hidden" name="checksum" value="575454c5456c65e3ed87409f986425f12df1179c1b2dca2e9ae5a5034790072b">
+        <input type="submit" value="Pay Now">
+    </form>
+</body>
+
+</html>

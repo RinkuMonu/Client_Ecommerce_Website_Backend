@@ -3,48 +3,44 @@ import { merchantInfo } from "../config.js";
 
 const secretkey = merchantInfo.secretKey;
 
+// Request checksum
 const getChecksumString = (data) => {
-  const checksumsequence = [
-    "amount", "bankid", "buyerAddress", "buyerCity", "buyerCountry", "buyerEmail",
-    "buyerFirstName", "buyerLastName", "buyerPhoneNumber", "buyerPincode", "buyerState",
-    "currency", "debitorcredit", "merchantIdentifier", "merchantIpAddress", "mode", "orderId",
-    "product1Description", "product2Description", "product3Description", "product4Description",
-    "productDescription", "productInfo", "purpose", "returnUrl", "shipToAddress", "shipToCity",
-    "shipToCountry", "shipToFirstname", "shipToLastname", "shipToPhoneNumber", "shipToPincode",
-    "shipToState", "showMobile", "txnDate", "txnType", "zpPayOption"
-  ];
+    const checksumsequence = [
+        "amount", "buyerAddress", "buyerCity", "buyerCountry", "buyerEmail",
+        "buyerFirstName", "buyerLastName", "buyerPhoneNumber", "buyerPincode", "buyerState",
+        "currency", "merchantIdentifier", "merchantIpAddress", "mode", "orderId",
+        "productDescription", "txnDate", "txnType", "zpPayOption", "purpose"
+    ];
 
-  let checksumstring = "";
-  for (let key of checksumsequence) {
-    if (data[key] && data[key].toString() !== "") {
-      checksumstring += `${key}=${data[key]}&`;
+    let checksumstring = "";
+    for (let key of checksumsequence) {
+        if (data[key] && data[key].toString() !== "") {
+            checksumstring += `${key}=${data[key]}&`;
+        }
     }
-  }
-  return checksumstring;
+    return checksumstring;
 };
 
-
+// Response checksum
 const getResponseChecksumString = (data) => {
-  const checksumsequence = [
-    "amount", "bank", "bankid", "cardId", "cardScheme", "cardToken", "cardhashid",
-    "doRedirect", "orderId", "paymentMethod", "paymentMode", "responseCode",
-    "responseDescription", "productDescription", "product1Description", "product2Description",
-    "product3Description", "product4Description", "pgTransId", "pgTransTime"
-  ];
+    const checksumsequence = [
+        "amount", "bank", "bankid", "cardId", "cardScheme", "cardToken", "cardhashid",
+        "doRedirect", "orderId", "paymentMethod", "paymentMode", "responseCode",
+        "responseDescription", "productDescription", "product1Description", "product2Description",
+        "product3Description", "product4Description", "pgTransId", "pgTransTime"
+    ];
 
-  let checksumstring = "";
-  for (let key of checksumsequence) {
-    if (data[key]) {
-      checksumstring += `${key}=${data[key]}&`;
+    let checksumstring = "";
+    for (let key of checksumsequence) {
+        if (data[key] && data[key].toString() !== "") {
+            checksumstring += `${key}=${data[key]}&`;
+        }
     }
-  }
-  return checksumstring;
+    return checksumstring;
 };
 
 const calculateChecksum = (checksumstring) => {
-  const hmac = crypto.createHmac("sha256", secretkey);
-  hmac.update(checksumstring);
-  return hmac.digest("hex");
+    return crypto.createHmac("sha256", secretkey).update(checksumstring).digest("hex");
 };
 
 export default { getChecksumString, getResponseChecksumString, calculateChecksum };

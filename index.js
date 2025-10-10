@@ -25,7 +25,7 @@ import salesRouter from "./src/routes/sales.router.js";
 import newsletter from "./src/routes/newsletter.Routes.js";
 import coupon from "./src/routes/coupon.router.js";
 import faqRoutes from "./src/routes/faq.routes.js";
-import posttozaakpay from "./src/routes/posttozaakpay.js";
+import zaakpayRoutes from "./src/routes/zaakpayRoutes.js";
 
 console.log("🔍 ENV CHECK:", {
   merchantId: process.env.ZAAKPAY_MERCHANT_ID,
@@ -86,8 +86,8 @@ app.use("/api/newsletter", newsletter);
 app.get("/api/dashboard", isAdmin, getDashboardData);
 app.use("/api", vendorRoutes);
 app.use("/api/coupons", coupon);
-app.use("/api", posttozaakpay);
 app.use("/api/faqs", faqRoutes);
+app.use("/api", zaakpayRoutes);
 
 DBConnection();
 
