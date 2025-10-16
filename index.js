@@ -88,6 +88,9 @@ app.use("/api/coupons", coupon);
 app.use("/api/faqs", faqRoutes);
 app.use("/api", zaakpayRoutes);
 
+app.use("/api/salesOverview", salesRouter);
+
+
 DBConnection();
 
 app.get("/", (req, res) => {
