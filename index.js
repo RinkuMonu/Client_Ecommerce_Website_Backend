@@ -61,7 +61,8 @@ app.use(
       "https://admin.jajamblockprints.com",
       "https://spiral.fashion",
       "https://www.spiral.fashion",
-      "https://qubitnexts.com/"
+      "https://qubitnexts.com/",
+      "https://khushalkingdom.com/"
 
 
     ], // allow specific frontend domains
