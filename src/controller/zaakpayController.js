@@ -137,9 +137,9 @@ export const zaakpayPayin = async (req, res) => {
       shipToState: "",
       showMobile: "",
       txnDate: "",
-      txnType: "",
+      txnType: "1",
       paymentOptionTypes: "",
-      zpPayOption: ""
+      zpPayOption: "1"
     };
 
     // ✅ Generate checksum
@@ -188,12 +188,11 @@ const generateZaakpayChecksum = (data, key) => {
     "paymentOptionTypes", "zpPayOption"
   ];
 
+  // ✅ Include even empty fields
   const checksumString = keysInOrder
-    .filter(k => data[k] !== undefined && data[k] !== null && data[k] !== "")
-    .map(k => `${k}=${data[k]}`)
+    .map(k => `${k}=${data[k] !== undefined ? data[k] : ""}`)
     .join("&");
 
   const finalString = `${checksumString}|${key}`;
   return crypto.createHash("sha256").update(finalString).digest("hex");
 };
-
