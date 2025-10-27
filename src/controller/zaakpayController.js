@@ -88,10 +88,9 @@
 
 import crypto from "crypto";
 
-
 const merchantId = "236e6378d80e492f95283a119417ef01";
 const secretKey = "dca86ef26e4f423d938c00d52d2c2a5b";
-const apiUrl = "https://api.zaakpay.com/api/paymentTransact/V8"; // ✅ Live Endpoint
+const apiUrl = "https://api.zaakpay.com/api/paymentTransact/V8"; // ✅ Live endpoint
 
 export const zaakpayPayin = async (req, res) => {
   try {
@@ -99,58 +98,60 @@ export const zaakpayPayin = async (req, res) => {
 
     const orderId = "ZAAK" + Date.now();
     const amountInPaisa = Math.round(data.amount * 100);
-    const returnUrl = "https://jajamblockprints.com/api/status";
 
-    // ✅ Parameters (correct Zaakpay order)
+    // ✅ Only mandatory params, in alphabetical order
     const params = {
+      amount: amountInPaisa,
+      buyerEmail: data.email,
+      currency: "INR",
       merchantIdentifier: merchantId,
       orderId: orderId,
-      amount: amountInPaisa,          // amount in paisa (e.g. ₹100 → 10000)
-      currency: "INR",
-      buyerEmail: data.email,
-      buyerFirstName: data.name,
-      buyerLastName: "User",
-      buyerAddress: "India",
-      buyerCity: "Delhi",
-      buyerState: "Delhi",
-      buyerCountry: "IND",
-      buyerPincode: "110001",
-      buyerPhoneNumber: data.mobile,
-      returnUrl: returnUrl,
-      productDescription: "Zaakpay Payment"
     };
 
     // ✅ Generate checksum
     const checksum = generateZaakpayChecksum(params, secretKey);
     params.checksum = checksum;
 
-    // ✅ Generate HTML Form
-    const formFields = Object.entries(params)
-      .map(([key, value]) => `<input type="hidden" name="${key}" value="${value}" />`)
-      .join("\n");
+    // ✅ Generate full payment URL (for redirection)
+    const queryString = Object.entries(params)
+      .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+      .join("&");
 
-    const html = `
-      <html>
-        <body onload="document.forms[0].submit()">
-          <form method="POST" action="${apiUrl}">
-            ${formFields}
-          </form>
-        </body>
-      </html>
-    `;
+    const paymentUrl = `${apiUrl}?${queryString}`;
 
-    // ✅ Send HTML directly to browser
-    res.set("Content-Type", "text/html");
-    return res.send(html);
-
+    // ✅ Return response (you can redirect or send URL to frontend)
+    return res.json({
+      success: true,
+      message: "Zaakpay payment URL generated successfully",
+      paymentUrl,
+    });
   } catch (error) {
-    console.error("Zaakpay Payin Error:", error);
+    console.error("Zaakpay PayIn Error:", error);
     return res.status(500).json({
-      status: "failed",
-      message: `Zaakpay integration failed: ${error.message}`
+      success: false,
+      message: "Zaakpay integration failed",
+      error: error.message,
     });
   }
 };
+
+// ✅ Generate checksum for Zaakpay
+const generateZaakpayChecksum = (data, key) => {
+  // Alphabetically sort keys
+  const sortedKeys = Object.keys(data).sort();
+
+  // Build plain text string (Zaakpay style)
+  const plainText = sortedKeys
+    .map((k) => `${k}=${data[k] !== undefined ? data[k] : ""}`)
+    .join("&");
+
+  const finalString = `${plainText}|${key}`;
+
+  console.log("🔹 Plain Text for Checksum:", finalString); // debug
+
+  return crypto.createHash("sha256").update(finalString).digest("hex");
+};
+
 
 
 export const zaakpayCallback = async (req, res) => {
@@ -190,25 +191,25 @@ export const zaakpayCallback = async (req, res) => {
 };
 
 
-const generateZaakpayChecksum = (data, key) => {
-  const keysInOrder = [
-    "amount", "bankid", "buyerAddress", "buyerCity", "buyerCountry",
-    "buyerEmail", "buyerFirstName", "buyerLastName", "buyerPhoneNumber",
-    "buyerPincode", "buyerState", "currency", "debitorcredit",
-    "merchantIdentifier", "merchantIpAddress", "mode", "orderId",
-    "product1Description", "product2Description", "product3Description",
-    "product4Description", "productDescription", "productInfo", "purpose",
-    "returnUrl", "shipToAddress", "shipToCity", "shipToCountry",
-    "shipToFirstname", "shipToLastname", "shipToPhoneNumber",
-    "shipToPincode", "shipToState", "showMobile", "txnDate", "txnType",
-    "paymentOptionTypes", "zpPayOption"
-  ];
+// const generateZaakpayChecksum = (data, key) => {
+//   const keysInOrder = [
+//     "amount", "bankid", "buyerAddress", "buyerCity", "buyerCountry",
+//     "buyerEmail", "buyerFirstName", "buyerLastName", "buyerPhoneNumber",
+//     "buyerPincode", "buyerState", "currency", "debitorcredit",
+//     "merchantIdentifier", "merchantIpAddress", "mode", "orderId",
+//     "product1Description", "product2Description", "product3Description",
+//     "product4Description", "productDescription", "productInfo", "purpose",
+//     "returnUrl", "shipToAddress", "shipToCity", "shipToCountry",
+//     "shipToFirstname", "shipToLastname", "shipToPhoneNumber",
+//     "shipToPincode", "shipToState", "showMobile", "txnDate", "txnType",
+//     "paymentOptionTypes", "zpPayOption"
+//   ];
 
-  // ✅ Include even empty fields
-  const checksumString = keysInOrder
-    .map(k => `${k}=${data[k] !== undefined ? data[k] : ""}`)
-    .join("&");
+//   // ✅ Include even empty fields
+//   const checksumString = keysInOrder
+//     .map(k => `${k}=${data[k] !== undefined ? data[k] : ""}`)
+//     .join("&");
 
-  const finalString = `${checksumString}|${key}`;
-  return crypto.createHash("sha256").update(finalString).digest("hex");
-};
+//   const finalString = `${checksumString}|${key}`;
+//   return crypto.createHash("sha256").update(finalString).digest("hex");
+// };
