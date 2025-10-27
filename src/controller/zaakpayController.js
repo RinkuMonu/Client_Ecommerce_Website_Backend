@@ -169,18 +169,15 @@ export const zaakpayPayin = async (req, res) => {
 
 // ✅ Helper function to generate Zaakpay checksum
 const generateZaakpayChecksum = (data, key, algo = "sha256") => {
-  // remove null/empty values
-  const filtered = Object.fromEntries(
-    Object.entries(data).filter(([_, v]) => v !== null && v !== "")
-  );
+  // sort by key (same as PHP)
+  const sortedKeys = Object.keys(data).sort();
 
-  // sort by key
-  const sortedKeys = Object.keys(filtered).sort();
-  const queryString = sortedKeys.map(k => `${k}=${filtered[k]}`).join("&");
+  // build key=value string for all (including empty)
+  const queryString = sortedKeys.map(k => `${k}=${data[k] ?? ""}`).join("&");
 
-  // append secret key like PHP
+  // append |secretKey (exact same as PHP)
   const finalString = `${queryString}|${key}`;
 
-  // generate hash
+  // hash with SHA256
   return crypto.createHash(algo).update(finalString).digest("hex");
 };
