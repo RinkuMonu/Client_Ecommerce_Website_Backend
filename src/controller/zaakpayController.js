@@ -99,7 +99,7 @@ export const zaakpayPayin = async (req, res) => {
 
     const orderId = "ZAAK" + Date.now();
     const amountInPaisa = Math.round(data.amount * 100);
-    const returnUrl = "https://api.worldpayme.com/api/zaakpay/callback";
+    const returnUrl = "https://jajamblockprints.com/api/status";
 
     // ✅ Parameters (correct Zaakpay order)
     const params = {
@@ -151,6 +151,44 @@ export const zaakpayPayin = async (req, res) => {
     });
   }
 };
+
+
+export const zaakpayCallback = async (req, res) => {
+  try {
+    const response = req.body;
+    console.log("✅ Zaakpay Callback Response:", response);
+
+    // ✅ Extract checksum from Zaakpay response
+    const receivedChecksum = response.checksum;
+    delete response.checksum;
+
+    // ✅ Recreate checksum from received params
+    const calculatedChecksum = generateZaakpayChecksum(response, secretKey);
+
+    if (receivedChecksum === calculatedChecksum) {
+      console.log("✅ Checksum verified successfully");
+
+      // Example: Handle payment success/failure
+      if (response.responseCode === "100") {
+        console.log("🎉 Payment Successful for Order:", response.orderId);
+        // TODO: Update booking/payment status to "success"
+      } else {
+        console.log("❌ Payment Failed for Order:", response.orderId);
+        // TODO: Update booking/payment status to "failed"
+      }
+
+      return res.send(`<h3>Payment status updated successfully.</h3>`);
+    } else {
+      console.log("❌ Invalid checksum received in callback");
+      return res.status(400).send("Invalid checksum received.");
+    }
+
+  } catch (error) {
+    console.error("Callback Error:", error);
+    res.status(500).send("Internal Server Error in Callback");
+  }
+};
+
 
 const generateZaakpayChecksum = (data, key) => {
   const keysInOrder = [
