@@ -86,8 +86,8 @@ app.get("/api/dashboard", isAdmin, getDashboardData);
 app.use("/api", vendorRoutes);
 app.use("/api/coupons", coupon);
 app.use("/api/faqs", faqRoutes);
-app.use("/api", zaakpayRoutes);
-
+// app.use("/api", zaakpayRoutes);
+app.use("/api/zaakpay", zaakpayRoutes);
 app.use("/api/salesOverview", salesRouter);
 
 

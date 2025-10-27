@@ -1,46 +1,28 @@
 import crypto from "crypto";
-import { merchantInfo } from "../config.js";
 
-const secretkey = merchantInfo.secretKey;
+/**
+ * Generate Zaakpay checksum
+ * @param {Object} params - Key-value object of parameters to send to Zaakpay
+ * @param {String} secretKey - Zaakpay secret key
+ * @returns {String} - Generated checksum
+ */
+export const generateZaakpayChecksum = (params, secretKey) => {
+    // 1️⃣ Filter out null, undefined, empty values
+    const filteredParams = Object.entries(params).filter(
+        ([key, value]) => value !== null && value !== undefined && value !== ""
+    );
 
-// Request checksum
-const getChecksumString = (data) => {
-    const checksumsequence = [
-        "amount", "buyerAddress", "buyerCity", "buyerCountry", "buyerEmail",
-        "buyerFirstName", "buyerLastName", "buyerPhoneNumber", "buyerPincode", "buyerState",
-        "currency", "merchantIdentifier", "merchantIpAddress", "mode", "orderId",
-        "productDescription", "txnDate", "txnType", "zpPayOption", "purpose"
-    ];
+    // 2️⃣ Sort params alphabetically by key
+    const sortedParams = filteredParams.sort((a, b) => a[0].localeCompare(b[0]));
 
-    let checksumstring = "";
-    for (let key of checksumsequence) {
-        if (data[key] && data[key].toString() !== "") {
-            checksumstring += `${key}=${data[key]}&`;
-        }
-    }
-    return checksumstring;
+    // 3️⃣ Create query string
+    const queryString = sortedParams.map(([key, value]) => `${key}=${value}`).join("&");
+
+    // 4️⃣ Append secret key
+    const checksumString = `${queryString}|${secretKey}`;
+
+    // 5️⃣ Generate HMAC SHA-256 checksum
+    const checksum = crypto.createHmac("sha256", secretKey).update(checksumString).digest("hex");
+
+    return checksum;
 };
-
-// Response checksum
-const getResponseChecksumString = (data) => {
-    const checksumsequence = [
-        "amount", "bank", "bankid", "cardId", "cardScheme", "cardToken", "cardhashid",
-        "doRedirect", "orderId", "paymentMethod", "paymentMode", "responseCode",
-        "responseDescription", "productDescription", "product1Description", "product2Description",
-        "product3Description", "product4Description", "pgTransId", "pgTransTime"
-    ];
-
-    let checksumstring = "";
-    for (let key of checksumsequence) {
-        if (data[key] && data[key].toString() !== "") {
-            checksumstring += `${key}=${data[key]}&`;
-        }
-    }
-    return checksumstring;
-};
-
-const calculateChecksum = (checksumstring) => {
-    return crypto.createHmac("sha256", secretkey).update(checksumstring).digest("hex");
-};
-
-export default { getChecksumString, getResponseChecksumString, calculateChecksum };
