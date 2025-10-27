@@ -116,7 +116,7 @@ export const zaakpayPayin = async (req, res) => {
       currency: "INR",
       debitorcredit: "",
       merchantIdentifier: merchantId,
-      merchantIpAddress: "127.0.0.1",
+      merchantIpAddress: "101.53.144.53",
       mode: "0",
       orderId: orderId,
       product1Description: "",
