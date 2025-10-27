@@ -87,10 +87,7 @@
 
 
 import crypto from "crypto";
-import qs from "querystring";
-// import VirtualAccountTransaction from "../models/VirtualAccountTransaction.js"; // optional if using DB
 
-// ✅ Zaakpay LIVE credentials
 const merchantId = "236e6378d80e492f95283a119417ef01";
 const secretKey = "dca86ef26e4f423d938c00d52d2c2a5b";
 const apiUrl = "https://api.zaakpay.com/api/paymentTransact/V8"; // ✅ Live Endpoint
@@ -98,86 +95,105 @@ const apiUrl = "https://api.zaakpay.com/api/paymentTransact/V8"; // ✅ Live End
 export const zaakpayPayin = async (req, res) => {
   try {
     const data = req.body;
-    const user = req.user || {}; // if available via auth middleware
 
-    // ✅ Generate Order ID & Convert amount to paisa
     const orderId = "ZAAK" + Date.now();
     const amountInPaisa = Math.round(data.amount * 100);
-
-    // ✅ Callback / Return URL
     const returnUrl = "https://api.worldpayme.com/api/zaakpay/callback";
 
-    // ✅ Prepare Zaakpay Params
+    // ✅ Parameters (correct Zaakpay order)
     const params = {
-      merchantIdentifier: merchantId,
-      orderId: orderId,
       amount: amountInPaisa,
-      currency: "INR",
+      bankid: "",
+      buyerAddress: "India",
+      buyerCity: "Delhi",
+      buyerCountry: "IND",
       buyerEmail: data.email,
       buyerFirstName: data.name,
       buyerLastName: "User",
-      buyerAddress: "India",
-      buyerCity: "Delhi",
-      buyerState: "Delhi",
-      buyerCountry: "IND",
-      buyerPincode: "110001",
       buyerPhoneNumber: data.mobile,
+      buyerPincode: "110001",
+      buyerState: "Delhi",
+      currency: "INR",
+      debitorcredit: "",
+      merchantIdentifier: merchantId,
+      merchantIpAddress: "127.0.0.1",
+      mode: "0",
+      orderId: orderId,
+      product1Description: "",
+      product2Description: "",
+      product3Description: "",
+      product4Description: "",
+      productDescription: "Zaakpay Payment",
+      productInfo: "",
+      purpose: "",
       returnUrl: returnUrl,
-      productDescription: "Zaakpay Payment"
+      shipToAddress: "",
+      shipToCity: "",
+      shipToCountry: "",
+      shipToFirstname: "",
+      shipToLastname: "",
+      shipToPhoneNumber: "",
+      shipToPincode: "",
+      shipToState: "",
+      showMobile: "",
+      txnDate: "",
+      txnType: "",
+      paymentOptionTypes: "",
+      zpPayOption: ""
     };
 
-    // ✅ Generate Checksum (same as PHP)
+    // ✅ Generate checksum
     const checksum = generateZaakpayChecksum(params, secretKey);
     params.checksum = checksum;
 
-    // ✅ (Optional) Save transaction before redirect
-    /*
-    const txn = new VirtualAccountTransaction({
-      customerId: user?._id || "guest",
-      transactionNo: data.reference,
-      amount: data.amount,
-      name: data.name,
-      mobile: data.mobile,
-      email: data.email,
-      apiTransactionNo: orderId,
-      status: "0", // pending
-      apiPartner: "zaakpay"
-    });
-    await txn.save();
-    */
+    // ✅ Generate HTML Form
+    const formFields = Object.entries(params)
+      .map(([key, value]) => `<input type="hidden" name="${key}" value="${value}" />`)
+      .join("\n");
 
-    // ✅ Build Payment URL (redirect like PHP)
-    const queryString = qs.stringify(params);
-    const paymentUrl = `${apiUrl}?${queryString}`;
+    const html = `
+      <html>
+        <body onload="document.forms[0].submit()">
+          <form method="POST" action="${apiUrl}">
+            ${formFields}
+          </form>
+        </body>
+      </html>
+    `;
 
-    // ✅ Return success response
-    return res.json({
-      status: "success",
-      message: "Zaakpay Payment URL generated successfully.",
-      payment_url: paymentUrl
-    });
+    // ✅ Send HTML directly to browser
+    res.set("Content-Type", "text/html");
+    return res.send(html);
 
   } catch (error) {
     console.error("Zaakpay Payin Error:", error);
     return res.status(500).json({
       status: "failed",
-      data: null,
       message: `Zaakpay integration failed: ${error.message}`
     });
   }
 };
 
-// ✅ Helper function to generate Zaakpay checksum
-const generateZaakpayChecksum = (data, key, algo = "sha256") => {
-  // sort by key (same as PHP)
-  const sortedKeys = Object.keys(data).sort();
+const generateZaakpayChecksum = (data, key) => {
+  const keysInOrder = [
+    "amount", "bankid", "buyerAddress", "buyerCity", "buyerCountry",
+    "buyerEmail", "buyerFirstName", "buyerLastName", "buyerPhoneNumber",
+    "buyerPincode", "buyerState", "currency", "debitorcredit",
+    "merchantIdentifier", "merchantIpAddress", "mode", "orderId",
+    "product1Description", "product2Description", "product3Description",
+    "product4Description", "productDescription", "productInfo", "purpose",
+    "returnUrl", "shipToAddress", "shipToCity", "shipToCountry",
+    "shipToFirstname", "shipToLastname", "shipToPhoneNumber",
+    "shipToPincode", "shipToState", "showMobile", "txnDate", "txnType",
+    "paymentOptionTypes", "zpPayOption"
+  ];
 
-  // build key=value string for all (including empty)
-  const queryString = sortedKeys.map(k => `${k}=${data[k] ?? ""}`).join("&");
+  const checksumString = keysInOrder
+    .filter(k => data[k] !== undefined && data[k] !== null && data[k] !== "")
+    .map(k => `${k}=${data[k]}`)
+    .join("&");
 
-  // append |secretKey (exact same as PHP)
-  const finalString = `${queryString}|${key}`;
-
-  // hash with SHA256
-  return crypto.createHash(algo).update(finalString).digest("hex");
+  const finalString = `${checksumString}|${key}`;
+  return crypto.createHash("sha256").update(finalString).digest("hex");
 };
+
