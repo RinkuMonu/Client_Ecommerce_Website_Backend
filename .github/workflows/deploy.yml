@@ -31,7 +31,7 @@ jobs:
           password: ${{ secrets.BACKEND_SSH_PASSWORD }}
           port: ${{ secrets.BACKEND_SSH_PORT }}
           source: "backend.tar.gz"
-          target: "/home/apijaja/"
+          target: "/home/apijajam/"
 
       - name: 🔐 SSH Deploy with .env Safety
         uses: appleboy/ssh-action@master
@@ -42,31 +42,31 @@ jobs:
           port: ${{ secrets.BACKEND_SSH_PORT }}
           script: |
             echo "🔐 Backing up .env (if exists)"
-            cd /home/apijaja/public_html/Client_Ecommerce_Website_Backend
+            cd /home/apijajam/public_html/Client_Ecommerce_Website_Backend
             if [ -f .env ]; then
-              cp .env /home/apijaja/.env_backup
+              cp .env /home/apijajam/.env_backup
             fi
 
             echo "🛡️ Full code backup"
             timestamp=$(date +%Y%m%d_%H%M%S)
-            mkdir -p /home/apijaja/backup_backend
-            cp -r . /home/apijaja/backup_backend/backup_$timestamp
+            mkdir -p /home/apijajam/backup_backend
+            cp -r . /home/apijajam/backup_backend/backup_$timestamp
 
             echo "📦 Extracting new backend.tar.gz"
-            tar -xzvf /home/apijaja/backend.tar.gz -C .
-            rm /home/apijaja/backend.tar.gz
+            tar -xzvf /home/apijajam/backend.tar.gz -C .
+            rm /home/apijajam/backend.tar.gz
 
             echo "♻️ Restoring .env (if backup exists)"
-            if [ -f /home/apijaja/.env_backup ]; then
-              cp /home/apijaja/.env_backup .env
-              rm /home/apijaja/.env_backup
+            if [ -f /home/apijajam/.env_backup ]; then
+              cp /home/apijajam/.env_backup .env
+              rm /home/apijajam/.env_backup
             fi
 
             echo "📦 Installing packages"
             npm install --legacy-peer-deps
 
             echo "🚀 Restarting Node app using PM2"
-         
+            pm2 restart api.jajamblockprients.com  || pm2 start index.js --name api.jajamblockprients.com 
 
             echo "✅ Deployment finished!"
             
