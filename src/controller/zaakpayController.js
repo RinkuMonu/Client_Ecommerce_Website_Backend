@@ -88,8 +88,6 @@
 
 import crypto from "crypto";
 
-
-
 const merchantId = "236e6378d80e492f95283a119417ef01";
 const secretKey = "dca86ef26e4f423d938c00d52d2c2a5b";
 const apiUrl = "https://api.zaakpay.com/api/paymentTransact/V8"; // ✅ Live endpoint
@@ -99,29 +97,29 @@ export const zaakpayPayin = async (req, res) => {
     const data = req.body;
 
     const orderId = "ZAAK" + Date.now();
-    const amountInPaisa = Math.round(data.amount * 100);
+    const amountInPaisa = Math.round(data.amount * 100); // ₹ → paisa
 
-    // ✅ Only mandatory params, in alphabetical order
+    // ✅ Only the required parameters confirmed by Zaakpay
     const params = {
       amount: amountInPaisa,
       buyerEmail: data.email,
       currency: "INR",
       merchantIdentifier: merchantId,
-      orderId: orderId,
+      orderId,
     };
 
-    // ✅ Generate checksum
+    // ✅ 2️⃣ Generate checksum using RAW values (no URL encoding)
     const checksum = generateZaakpayChecksum(params, secretKey);
     params.checksum = checksum;
 
-    // ✅ Generate full payment URL (for redirection)
+    // ✅ 3️⃣ Create URL with ENCODED values (for browser safety)
     const queryString = Object.entries(params)
       .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
       .join("&");
 
     const paymentUrl = `${apiUrl}?${queryString}`;
 
-    // ✅ Return response (you can redirect or send URL to frontend)
+    // ✅ 4️⃣ Send final response
     return res.json({
       success: true,
       message: "Zaakpay payment URL generated successfully",
@@ -137,25 +135,17 @@ export const zaakpayPayin = async (req, res) => {
   }
 };
 
-// ✅ Generate checksum for Zaakpay
-
 const generateZaakpayChecksum = (data, key) => {
-  // Alphabetically sort keys
-  const sortedKeys = Object.keys(data).sort();
-
-  // Build plain text string (Zaakpay style)
+  const sortedKeys = Object.keys(data).sort(); // alphabetical order
   const plainText = sortedKeys
     .map((k) => `${k}=${data[k] !== undefined ? data[k] : ""}`)
     .join("&");
 
   const finalString = `${plainText}|${key}`;
-
-  console.log("🔹 Plain Text for Checksum:", finalString); // debug
+  console.log("🔹 Plain Text for Checksum:", finalString);
 
   return crypto.createHash("sha256").update(finalString).digest("hex");
 };
-
-
 
 export const zaakpayCallback = async (req, res) => {
   try {
