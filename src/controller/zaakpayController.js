@@ -122,15 +122,18 @@ export const zaakpayPayin = async (req, res) => {
   try {
     const { amount, email } = req.body;
 
-    // ✅ Amount in paisa
+    // ✅ Convert amount to paisa
     const amountInPaisa = amount * 100;
 
+    // ✅ Updated params with returnUrl and productDescription
     const params = {
       amount: amountInPaisa.toString(),
       buyerEmail: email,
       currency: "INR",
       merchantIdentifier: merchantId,
-      orderId: `ZAAK${Date.now()}`
+      orderId: `ZAAK${Date.now()}`,
+      productDescription: "Test Transaction",
+      returnUrl: "https://jajamblockprints.com/api/status",
     };
 
     const checksum = generateZaakpayChecksum(params, secretKey);
