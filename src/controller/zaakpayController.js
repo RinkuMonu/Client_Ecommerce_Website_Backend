@@ -143,7 +143,7 @@ export const initiateZaakpayPayment = async (req, res) => {
       .map((key) => `${key}=${encodeURIComponent(data[key])}`)
       .join("&");
 
-    const finalUrl = `https://zaakstaging.zaakpay.com/api/paymentTransact/V8?${queryString}&checksum=${checksum}`;
+    const finalUrl = `https://api.zaakpay.com/api/paymentTransact/V8?${queryString}&checksum=${checksum}`;
 
     console.log("🔹 Final URL:", finalUrl);
 
