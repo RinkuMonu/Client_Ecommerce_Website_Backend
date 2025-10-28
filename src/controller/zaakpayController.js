@@ -92,59 +92,63 @@ const merchantId = "b19e8f103bce406cbd3476431b6b7973";
 const secretKey = "0678056d96914a8583fb518caf42828a";
 const apiUrl = "https://zaakstaging.zaakpay.com/api/paymentTransact/V8"; // ✅ Live endpoint
 
+const generateZaakpayChecksum = (data, key) => {
+  const sortedKeys = Object.keys(data)
+    .filter(k => data[k] !== undefined && data[k] !== "")
+    .sort();
+
+  const plainText = sortedKeys
+    .map(k => `${k}=${data[k]}`)
+    .join("&");
+
+  const hmac = crypto.createHmac("sha256", key);
+  hmac.update(plainText);
+  const checksum = hmac.digest("hex");
+
+  console.log("🔹 Checksum Plain Text:", plainText);
+  console.log("🔹 Generated Checksum:", checksum);
+
+  return checksum;
+};
+
 export const zaakpayPayin = async (req, res) => {
   try {
-    const data = req.body;
+    const { amount, email } = req.body;
 
-    const orderId = "ZAAK" + Date.now();
-    const amountInPaisa = Math.round(data.amount * 100); // ₹ → paisa
+    // ✅ Amount in paisa
+    const amountInPaisa = amount * 100;
 
-    // ✅ Only the required parameters confirmed by Zaakpay
     const params = {
-      amount: amountInPaisa,
-      buyerEmail: data.email,
+      amount: amountInPaisa.toString(),
+      buyerEmail: email,
       currency: "INR",
       merchantIdentifier: merchantId,
-      orderId,
+      orderId: `ZAAK${Date.now()}`,
+      productDescription: "Test Transaction", // recommended to include at least one
+      returnUrl: "https://yourwebsite.com/payment/response", // must be registered in dashboard
     };
 
-    // ✅ 2️⃣ Generate checksum using RAW values (no URL encoding)
     const checksum = generateZaakpayChecksum(params, secretKey);
-    params.checksum = checksum;
 
-    // ✅ 3️⃣ Create URL with ENCODED values (for browser safety)
-    const queryString = Object.entries(params)
+    const queryString = Object.entries({ ...params, checksum })
       .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
       .join("&");
 
     const paymentUrl = `${apiUrl}?${queryString}`;
 
-    // ✅ 4️⃣ Send final response
     return res.json({
       success: true,
       message: "Zaakpay payment URL generated successfully",
       paymentUrl,
     });
   } catch (error) {
-    console.error("Zaakpay PayIn Error:", error);
+    console.error("Zaakpay Error:", error);
     return res.status(500).json({
       success: false,
       message: "Zaakpay integration failed",
       error: error.message,
     });
   }
-};
-
-const generateZaakpayChecksum = (data, key) => {
-  const sortedKeys = Object.keys(data).sort(); // alphabetical order
-  const plainText = sortedKeys
-    .map((k) => `${k}=${data[k] !== undefined ? data[k] : ""}`)
-    .join("&");
-
-  const finalString = `${plainText}|${key}`;
-  console.log("🔹 Plain Text for Checksum:", finalString);
-
-  return crypto.createHash("sha256").update(finalString).digest("hex");
 };
 
 export const zaakpayCallback = async (req, res) => {
