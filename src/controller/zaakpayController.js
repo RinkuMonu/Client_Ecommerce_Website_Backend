@@ -100,9 +100,14 @@ const apiUrl = "https://api.zaakpay.com/api/paymentTransact/V8";
 
 const generateZaakpayChecksum = (data, key) => {
   const sortedKeys = Object.keys(data).sort();
-  const plainText = sortedKeys.map(k => `${k}=${data[k]}`).join("&") + key;
-  console.log("🔹 Checksum Plain Text:", plainText);
-  return crypto.createHash("sha256").update(plainText, "utf8").digest("hex");
+  const plainText = sortedKeys.map(k => `${k}=${data[k]}`).join("&");
+  
+  // ✅ Correct placement: secretKey first
+  const checksumString = key + plainText;
+  
+  console.log("🔹 Checksum Plain Text:", checksumString);
+  
+  return crypto.createHash("sha256").update(checksumString, "utf8").digest("hex");
 };
 
 export const initiateZaakpayPayment = async (req, res) => {
