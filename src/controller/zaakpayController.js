@@ -122,6 +122,7 @@ export const zaakpayPayin = async (req, res) => {
     // ✅ Updated params with returnUrl and productDescription
     const params = {
       amount: amountInPaisa.toString(),
+      buyerFirstName: "Rahul",
       buyerEmail: email,
       currency: "INR",
       merchantIdentifier: merchantId,
