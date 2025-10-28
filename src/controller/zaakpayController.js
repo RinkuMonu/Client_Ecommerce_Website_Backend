@@ -136,6 +136,7 @@ export const zaakpayPayin = async (req, res) => {
 };
 
 // ✅ Generate checksum for Zaakpay
+
 const generateZaakpayChecksum = (data, key) => {
   // Alphabetically sort keys
   const sortedKeys = Object.keys(data).sort();
