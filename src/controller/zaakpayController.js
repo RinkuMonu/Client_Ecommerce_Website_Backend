@@ -99,16 +99,21 @@ const apiUrl = "https://api.zaakpay.com/api/paymentTransact/V8";
 // const apiUrl = "https://zaakstaging.zaakpay.com/api/paymentTransact/V8";
 
 const generateZaakpayChecksum = (data, key) => {
+  // Step 1: Sort and filter only non-empty parameters
   const sortedKeys = Object.keys(data)
     .filter(k => data[k] !== undefined && data[k] !== "")
     .sort();
 
+  // Step 2: Build string in key=value&key2=value2 format
   const plainText = sortedKeys.map(k => `${k}=${data[k]}`).join("&");
-  const checksumString = key + plainText; // ✅ secretKey first
 
-  console.log("🔹 Checksum Plain Text:", checksumString);
+  // Step 3: Generate HMAC SHA-256 hash using secret key
+  const checksum = crypto.createHmac("sha256", key).update(plainText).digest("hex");
 
-  return crypto.createHash("sha256").update(checksumString, "utf8").digest("hex");
+  console.log("🔹 Checksum String Used:", plainText);
+  console.log("🔹 Generated Checksum:", checksum);
+
+  return checksum;
 };
 
 export const zaakpayPayin = async (req, res) => {
@@ -117,10 +122,11 @@ export const zaakpayPayin = async (req, res) => {
 
     const amountInPaise = (amount * 100).toString();
 
+    // ✅ Prepare Zaakpay parameters (alphabetically preferred)
     const params = {
       amount: amountInPaise,
-      buyerFirstName: "Rahul",
       buyerEmail: email,
+      buyerFirstName: "Rahul",
       currency: "INR",
       merchantIdentifier: merchantId,
       orderId: `ZAAK${Date.now()}`,
@@ -128,15 +134,12 @@ export const zaakpayPayin = async (req, res) => {
       returnUrl: "https://jajamblockprints.com/api/status",
     };
 
-    // ✅ Generate checksum
+    // ✅ Generate checksum using your secret key
     const checksum = generateZaakpayChecksum(params, secretKey);
 
-    // ✅ Build query string
+    // ✅ Build final payment URL
     const queryString = Object.entries({ ...params, checksum })
-      .map(([k, v]) => {
-        if (k === "buyerEmail") return `${k}=${v}`; // 👈 keep @ as is
-        return `${k}=${encodeURIComponent(v)}`;
-      })
+      .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
       .join("&");
 
     const paymentUrl = `${apiUrl}?${queryString}`;
@@ -145,6 +148,7 @@ export const zaakpayPayin = async (req, res) => {
       success: true,
       message: "Zaakpay payment URL generated successfully",
       paymentUrl,
+      checksumString: checksum, // optional for debug
     });
   } catch (error) {
     console.error("Zaakpay Error:", error);
