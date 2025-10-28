@@ -104,18 +104,12 @@ const generateZaakpayChecksum = (data, key) => {
     .filter(k => data[k] !== undefined && data[k] !== "")
     .sort();
 
-  const plainText = sortedKeys
-    .map(k => `${k}=${data[k]}`)
-    .join("&");
+  const plainText = sortedKeys.map(k => `${k}=${data[k]}`).join("&");
+  const finalString = `${plainText}|${key}`;
 
-  const hmac = crypto.createHmac("sha256", key);
-  hmac.update(plainText);
-  const checksum = hmac.digest("hex");
+  console.log("🔹 Checksum Plain Text:", finalString);
 
-  console.log("🔹 Checksum Plain Text:", plainText);
-  console.log("🔹 Generated Checksum:", checksum);
-
-  return checksum;
+  return crypto.createHash("sha256").update(finalString).digest("hex");
 };
 
 export const zaakpayPayin = async (req, res) => {
