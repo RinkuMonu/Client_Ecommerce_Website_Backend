@@ -124,7 +124,6 @@ export const zaakpayPayin = async (req, res) => {
       currency: "INR",
       merchantIdentifier: merchantId,
       orderId: `ZAAK${Date.now()}`,
-      productDescription: "Test Transaction", // recommended to include at least one
       returnUrl: "https://yourwebsite.com/payment/response", // must be registered in dashboard
     };
 
