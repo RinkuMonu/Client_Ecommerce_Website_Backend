@@ -88,29 +88,22 @@
 
 import crypto from "crypto";
 
-// live enviroment
+// ✅ LIVE ENVIRONMENT
 const merchantId = "236e6378d80e492f95283a119417ef01";
 const secretKey = "dca86ef26e4f423d938c00d52d2c2a5b";
 const apiUrl = "https://api.zaakpay.com/api/paymentTransact/V8";
 
-// stagging enviroment
-
+// ✅ STAGING ENVIRONMENT (use only for test)
 // const merchantId = "b19e8f103bce406cbd3476431b6b7973";
 // const secretKey = "0678056d96914a8583fb518caf42828a";
 // const apiUrl = "https://zaakstaging.zaakpay.com/api/paymentTransact/V8";
 
-
 const generateZaakpayChecksum = (data, key) => {
-  const sortedKeys = Object.keys(data)
-    .filter(k => data[k] !== undefined && data[k] !== "")
-    .sort();
+  const sortedKeys = Object.keys(data).filter(k => data[k] !== "").sort();
+  const plainText = sortedKeys.map(k => `${k}=${data[k]}`).join("&") + key;
 
-  const plainText = sortedKeys.map(k => `${k}=${data[k]}`).join("&");
-  const finalString = plainText + key;
-
-  console.log("🔹 Checksum Plain Text:", finalString);
-
-  return crypto.createHash("sha256").update(finalString, "utf8").digest("hex");
+  console.log("🔹 Checksum Plain Text:", plainText);
+  return crypto.createHash("sha256").update(plainText, "utf8").digest("hex");
 };
 
 export const initiateZaakpayPayment = async (req, res) => {
@@ -118,32 +111,27 @@ export const initiateZaakpayPayment = async (req, res) => {
     const { amount, buyerEmail = "test@example.com", buyerFirstName = "Rahul" } = req.body;
     const orderId = "ZAAK" + Date.now();
 
+    // ✅ Convert to paise (very important)
+    const amountInPaise = amount * 100;
+
     const data = {
-      amount,
+      amount: amountInPaise.toString(),
       buyerEmail,
       buyerFirstName,
       currency: "INR",
       merchantIdentifier: merchantId,
-      mode: "TEST",
       orderId,
+      productDescription: "Test Transaction",
       returnUrl: "https://jajamblockprints.com/api/status",
     };
 
-    // sort parameters alphabetically
-    const sortedKeys = Object.keys(data).sort();
-    const checksumPlainText = sortedKeys
-      .map((key) => `${key}=${data[key]}`)
-      .join("&") + secretKey;
+    const checksum = generateZaakpayChecksum(data, secretKey);
 
-    console.log("🔹 Checksum Plain Text:", checksumPlainText);
-
-    const checksum = crypto.createHash("sha256").update(checksumPlainText).digest("hex");
-
-    const queryString = sortedKeys
-      .map((key) => `${key}=${encodeURIComponent(data[key])}`)
+    const queryString = Object.keys(data)
+      .map(k => `${k}=${encodeURIComponent(data[k])}`)
       .join("&");
 
-    const finalUrl = `https://api.zaakpay.com/api/paymentTransact/V8?${queryString}&checksum=${checksum}`;
+    const finalUrl = `${apiUrl}?${queryString}&checksum=${checksum}`;
 
     console.log("🔹 Final URL:", finalUrl);
 
