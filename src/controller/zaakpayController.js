@@ -105,7 +105,7 @@ export const zaakpayPayin = async (req, res) => {
     const params = {
       amount: amountInPaisa,
       buyerEmail: data.email,
-      // currency: "INR",
+      currency: "INR",
       merchantIdentifier: merchantId,
       orderId: orderId,
     };
