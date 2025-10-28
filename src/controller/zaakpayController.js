@@ -88,8 +88,8 @@
 
 import crypto from "crypto";
 
-const merchantId = "b19e8f103bce406cbd3476431b6b7973";
-const secretKey = "0678056d96914a8583fb518caf42828a";
+const merchantId = "236e6378d80e492f95283a119417ef01";
+const secretKey = "dca86ef26e4f423d938c00d52d2c2a5b";
 const apiUrl = "https://zaakstaging.zaakpay.com/api/paymentTransact/V8"; // ✅ Live endpoint
 
 const generateZaakpayChecksum = (data, key) => {
