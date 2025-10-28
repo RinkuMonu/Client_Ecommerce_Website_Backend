@@ -122,11 +122,10 @@ export const zaakpayPayin = async (req, res) => {
 
     const amountInPaise = (amount * 100).toString();
 
-    // ✅ Prepare Zaakpay parameters (alphabetically preferred)
     const params = {
       amount: amountInPaise,
-      buyerEmail: email,
       buyerFirstName: "Rahul",
+      buyerEmail: email,
       currency: "INR",
       merchantIdentifier: merchantId,
       orderId: `ZAAK${Date.now()}`,
@@ -134,12 +133,15 @@ export const zaakpayPayin = async (req, res) => {
       returnUrl: "https://jajamblockprints.com/api/status",
     };
 
-    // ✅ Generate checksum using your secret key
+    // ✅ Generate checksum
     const checksum = generateZaakpayChecksum(params, secretKey);
 
-    // ✅ Build final payment URL
+    // ✅ Build query string
     const queryString = Object.entries({ ...params, checksum })
-      .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+      .map(([k, v]) => {
+        if (k === "buyerEmail") return `${k}=${v}`; // 👈 keep @ as is
+        return `${k}=${encodeURIComponent(v)}`;
+      })
       .join("&");
 
     const paymentUrl = `${apiUrl}?${queryString}`;
@@ -148,7 +150,6 @@ export const zaakpayPayin = async (req, res) => {
       success: true,
       message: "Zaakpay payment URL generated successfully",
       paymentUrl,
-      checksumString: checksum, // optional for debug
     });
   } catch (error) {
     console.error("Zaakpay Error:", error);
