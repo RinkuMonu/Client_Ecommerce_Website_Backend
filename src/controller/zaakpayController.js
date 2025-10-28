@@ -106,7 +106,7 @@ const generateZaakpayChecksum = (data, key) => {
     .sort();
 
   const plainText = sortedKeys.map(k => `${k}=${data[k]}`).join("&");
-  const finalString = plainText + key; // ✅ FIXED (removed "|")
+  const finalString = plainText + key;
 
   console.log("🔹 Checksum Plain Text:", finalString);
 
@@ -116,18 +116,15 @@ const generateZaakpayChecksum = (data, key) => {
 export const zaakpayPayin = async (req, res) => {
   try {
     const { amount, email } = req.body;
-
     const amountInPaisa = amount * 100;
 
+    // ✅ ONLY include the 5 approved parameters (alphabetical order)
     const params = {
       amount: amountInPaisa.toString(),
-      buyerFirstName: "Rahul",
       buyerEmail: email,
       currency: "INR",
       merchantIdentifier: merchantId,
       orderId: `ZAAK${Date.now()}`,
-      productDescription: "Test Transaction",
-      returnUrl: "https://jajamblockprints.com/api/status",
     };
 
     const checksum = generateZaakpayChecksum(params, secretKey);
@@ -137,6 +134,8 @@ export const zaakpayPayin = async (req, res) => {
       .join("&");
 
     const paymentUrl = `${apiUrl}?${queryString}`;
+
+    console.log("🔹 Final URL:", paymentUrl);
 
     return res.json({
       success: true,
