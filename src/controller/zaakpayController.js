@@ -99,25 +99,34 @@ const apiUrl = "https://api.zaakpay.com/api/paymentTransact/V8";
 // const apiUrl = "https://zaakstaging.zaakpay.com/api/paymentTransact/V8";
 
 const generateZaakpayChecksum = (data, key) => {
-  const sortedKeys = Object.keys(data).filter(k => data[k] !== "").sort();
+  const sortedKeys = Object.keys(data)
+    .filter(k => data[k] !== undefined && data[k] !== "")
+    .sort();
+  
   const plainText = sortedKeys.map(k => `${k}=${data[k]}`).join("&") + key;
-
   console.log("🔹 Checksum Plain Text:", plainText);
+  
   return crypto.createHash("sha256").update(plainText, "utf8").digest("hex");
 };
 
 export const initiateZaakpayPayment = async (req, res) => {
   try {
-    const { amount, buyerEmail = "test@example.com", buyerFirstName = "Rahul" } = req.body;
+    const {
+      amount,
+      buyerEmail = "test@example.com",
+      buyerFirstName = "Rahul",
+      buyerLastName = "Singh"
+    } = req.body;
+
     const orderId = "ZAAK" + Date.now();
+    const amountInPaise = (amount * 100).toString();
 
-    // ✅ Convert to paise (very important)
-    const amountInPaise = amount * 100;
-
+    // ✅ Include all mandatory params
     const data = {
-      amount: amountInPaise.toString(),
+      amount: amountInPaise,
       buyerEmail,
       buyerFirstName,
+      buyerLastName,
       currency: "INR",
       merchantIdentifier: merchantId,
       orderId,
@@ -125,14 +134,16 @@ export const initiateZaakpayPayment = async (req, res) => {
       returnUrl: "https://jajamblockprints.com/api/status",
     };
 
+    // ✅ Generate checksum
     const checksum = generateZaakpayChecksum(data, secretKey);
 
+    // ✅ Generate query string (same order)
     const queryString = Object.keys(data)
+      .sort()
       .map(k => `${k}=${encodeURIComponent(data[k])}`)
       .join("&");
 
     const finalUrl = `${apiUrl}?${queryString}&checksum=${checksum}`;
-
     console.log("🔹 Final URL:", finalUrl);
 
     return res.json({
@@ -140,9 +151,13 @@ export const initiateZaakpayPayment = async (req, res) => {
       message: "Zaakpay payment URL generated successfully",
       paymentUrl: finalUrl,
     });
+
   } catch (err) {
     console.error("Zaakpay Error:", err);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
 };
 
