@@ -90,7 +90,7 @@ import crypto from "crypto";
 
 const merchantId = "236e6378d80e492f95283a119417ef01";
 const secretKey = "dca86ef26e4f423d938c00d52d2c2a5b";
-const apiUrl = "https://api.zaakpay.com/api/paymentTransact/V8"; // ✅ Live endpoint
+const apiUrl = "https://zaakstaging.zaakpay.com/api/paymentTransact/V8"; // ✅ Live endpoint
 
 export const zaakpayPayin = async (req, res) => {
   try {
