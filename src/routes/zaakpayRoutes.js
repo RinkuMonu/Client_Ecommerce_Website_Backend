@@ -10,11 +10,11 @@
 // export default router;
 
 import express from "express";
-import { initiateZaakpayPayment, zaakpayCallback } from "../controller/zaakpayController.js";
+import { zaakpayPayin, zaakpayCallback } from "../controller/zaakpayController.js";
 
 const router = express.Router();
 
 // ✅ POST /api/zaakpay/payin
-router.post("/payin", initiateZaakpayPayment);
+router.post("/payin", zaakpayPayin);
 router.post("/callback", zaakpayCallback);
 export default router;

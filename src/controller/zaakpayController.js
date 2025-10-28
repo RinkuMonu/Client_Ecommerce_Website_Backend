@@ -133,7 +133,10 @@ export const zaakpayPayin = async (req, res) => {
 
     // ✅ Build query string
     const queryString = Object.entries({ ...params, checksum })
-      .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+      .map(([k, v]) => {
+        if (k === "buyerEmail") return `${k}=${v}`; // 👈 keep @ as is
+        return `${k}=${encodeURIComponent(v)}`;
+      })
       .join("&");
 
     const paymentUrl = `${apiUrl}?${queryString}`;
