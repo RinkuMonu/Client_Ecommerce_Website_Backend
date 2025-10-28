@@ -99,27 +99,26 @@ const merchantId = "b19e8f103bce406cbd3476431b6b7973";
 const secretKey = "0678056d96914a8583fb518caf42828a";
 const apiUrl = "https://zaakstaging.zaakpay.com/api/paymentTransact/V8";
 
+
 const generateZaakpayChecksum = (data, key) => {
   const sortedKeys = Object.keys(data)
     .filter(k => data[k] !== undefined && data[k] !== "")
     .sort();
 
   const plainText = sortedKeys.map(k => `${k}=${data[k]}`).join("&");
-  const finalString = `${plainText}|${key}`;
+  const finalString = plainText + key; // ✅ FIXED (removed "|")
 
   console.log("🔹 Checksum Plain Text:", finalString);
 
-  return crypto.createHash("sha256").update(finalString).digest("hex");
+  return crypto.createHash("sha256").update(finalString, "utf8").digest("hex");
 };
 
 export const zaakpayPayin = async (req, res) => {
   try {
     const { amount, email } = req.body;
 
-    // ✅ Convert amount to paisa
     const amountInPaisa = amount * 100;
 
-    // ✅ Updated params with returnUrl and productDescription
     const params = {
       amount: amountInPaisa.toString(),
       buyerFirstName: "Rahul",
@@ -159,23 +158,18 @@ export const zaakpayCallback = async (req, res) => {
     const response = req.body;
     console.log("✅ Zaakpay Callback Response:", response);
 
-    // ✅ Extract checksum from Zaakpay response
     const receivedChecksum = response.checksum;
     delete response.checksum;
 
-    // ✅ Recreate checksum from received params
     const calculatedChecksum = generateZaakpayChecksum(response, secretKey);
 
     if (receivedChecksum === calculatedChecksum) {
       console.log("✅ Checksum verified successfully");
 
-      // Example: Handle payment success/failure
       if (response.responseCode === "100") {
         console.log("🎉 Payment Successful for Order:", response.orderId);
-        // TODO: Update booking/payment status to "success"
       } else {
         console.log("❌ Payment Failed for Order:", response.orderId);
-        // TODO: Update booking/payment status to "failed"
       }
 
       return res.send(`<h3>Payment status updated successfully.</h3>`);
@@ -192,24 +186,92 @@ export const zaakpayCallback = async (req, res) => {
 
 
 // const generateZaakpayChecksum = (data, key) => {
-//   const keysInOrder = [
-//     "amount", "bankid", "buyerAddress", "buyerCity", "buyerCountry",
-//     "buyerEmail", "buyerFirstName", "buyerLastName", "buyerPhoneNumber",
-//     "buyerPincode", "buyerState", "currency", "debitorcredit",
-//     "merchantIdentifier", "merchantIpAddress", "mode", "orderId",
-//     "product1Description", "product2Description", "product3Description",
-//     "product4Description", "productDescription", "productInfo", "purpose",
-//     "returnUrl", "shipToAddress", "shipToCity", "shipToCountry",
-//     "shipToFirstname", "shipToLastname", "shipToPhoneNumber",
-//     "shipToPincode", "shipToState", "showMobile", "txnDate", "txnType",
-//     "paymentOptionTypes", "zpPayOption"
-//   ];
+//   const sortedKeys = Object.keys(data)
+//     .filter(k => data[k] !== undefined && data[k] !== "")
+//     .sort();
 
-//   // ✅ Include even empty fields
-//   const checksumString = keysInOrder
-//     .map(k => `${k}=${data[k] !== undefined ? data[k] : ""}`)
-//     .join("&");
+//   const plainText = sortedKeys.map(k => `${k}=${data[k]}`).join("&");
+//   const finalString = `${plainText}|${key}`;
 
-//   const finalString = `${checksumString}|${key}`;
+//   console.log("🔹 Checksum Plain Text:", finalString);
+
 //   return crypto.createHash("sha256").update(finalString).digest("hex");
+// };
+
+// export const zaakpayPayin = async (req, res) => {
+//   try {
+//     const { amount, email } = req.body;
+
+//     // ✅ Convert amount to paisa
+//     const amountInPaisa = amount * 100;
+
+//     // ✅ Updated params with returnUrl and productDescription
+//     const params = {
+//       amount: amountInPaisa.toString(),
+//       buyerFirstName: "Rahul",
+//       buyerEmail: email,
+//       currency: "INR",
+//       merchantIdentifier: merchantId,
+//       orderId: `ZAAK${Date.now()}`,
+//       productDescription: "Test Transaction",
+//       returnUrl: "https://jajamblockprints.com/api/status",
+//     };
+
+//     const checksum = generateZaakpayChecksum(params, secretKey);
+
+//     const queryString = Object.entries({ ...params, checksum })
+//       .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+//       .join("&");
+
+//     const paymentUrl = `${apiUrl}?${queryString}`;
+
+//     return res.json({
+//       success: true,
+//       message: "Zaakpay payment URL generated successfully",
+//       paymentUrl,
+//     });
+//   } catch (error) {
+//     console.error("Zaakpay Error:", error);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Zaakpay integration failed",
+//       error: error.message,
+//     });
+//   }
+// };
+
+// export const zaakpayCallback = async (req, res) => {
+//   try {
+//     const response = req.body;
+//     console.log("✅ Zaakpay Callback Response:", response);
+
+//     // ✅ Extract checksum from Zaakpay response
+//     const receivedChecksum = response.checksum;
+//     delete response.checksum;
+
+//     // ✅ Recreate checksum from received params
+//     const calculatedChecksum = generateZaakpayChecksum(response, secretKey);
+
+//     if (receivedChecksum === calculatedChecksum) {
+//       console.log("✅ Checksum verified successfully");
+
+//       // Example: Handle payment success/failure
+//       if (response.responseCode === "100") {
+//         console.log("🎉 Payment Successful for Order:", response.orderId);
+//         // TODO: Update booking/payment status to "success"
+//       } else {
+//         console.log("❌ Payment Failed for Order:", response.orderId);
+//         // TODO: Update booking/payment status to "failed"
+//       }
+
+//       return res.send(`<h3>Payment status updated successfully.</h3>`);
+//     } else {
+//       console.log("❌ Invalid checksum received in callback");
+//       return res.status(400).send("Invalid checksum received.");
+//     }
+
+//   } catch (error) {
+//     console.error("Callback Error:", error);
+//     res.status(500).send("Internal Server Error in Callback");
+//   }
 // };
