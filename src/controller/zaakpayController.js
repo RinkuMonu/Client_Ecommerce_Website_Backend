@@ -113,19 +113,13 @@ const secretKey = "dca86ef26e4f423d938c00d52d2c2a5b";
 const apiUrl = "https://api.zaakpay.com/api/paymentTransact/V8";
 
 const generateZaakpayChecksum = (data, key) => {
-  // Step 1: Sort and filter only non-empty parameters
   const sortedKeys = Object.keys(data)
     .filter(k => data[k] !== undefined && data[k] !== "")
     .sort();
 
-  // Step 2: Build string in key=value&key2=value2 format
   const plainText = sortedKeys.map(k => `${k}=${data[k]}`).join("&");
 
-  // Step 3: Generate HMAC SHA-256 hash using secret key
   const checksum = crypto.createHmac("sha256", key).update(plainText).digest("hex");
-
-  console.log("🔹 Checksum String Used:", plainText);
-  console.log("🔹 Generated Checksum:", checksum);
 
   return checksum;
 };
@@ -138,25 +132,25 @@ export const zaakpayPayin = async (req, res) => {
 
     // ✅ Step 1: Parameters as per Zaakpay required order
     const params = {
-      amount: amountInPaise,
-      buyerEmail: email,
-      buyerFirstName: "Rahul",
-      currency: "INR",
-      merchantIdentifier: merchantId,
-      orderId: `ZAAK${Date.now()}`,
-      productDescription: "Test Transaction",
-      returnUrl: "https://jajamblockprints.com/api/status",
-    };
+  amount: (amount * 100).toString(),
+  buyerEmail: email, // raw email
+  buyerFirstName: "Rahul",
+  currency: "INR",
+  merchantIdentifier: merchantId,
+  orderId: `ZAAK${Date.now()}`,
+  productDescription: "Test Transaction",
+  returnUrl: "https://jajamblockprints.com/api/status",
+};
 
-    // ✅ Step 2: Generate checksum
-    const checksum = generateZaakpayChecksum(params, secretKey);
+// ✅ Step 1: Generate checksum with RAW values (no encoding)
+const checksum = generateZaakpayChecksum(params, secretKey);
 
-    // ✅ Step 3: Build query string (proper encoding)
-    const queryString = Object.entries({ ...params, checksum })
-      .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
-      .join("&");
+// ✅ Step 2: Encode for URL
+const queryString = Object.entries({ ...params, checksum })
+  .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+  .join("&");
 
-    const paymentUrl = `${apiUrl}?${queryString}`;
+const paymentUrl = `${apiUrl}?${queryString}`;
 
     return res.json({
       success: true,
