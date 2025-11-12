@@ -191,22 +191,50 @@ export const zaakpayCallback = async (req, res) => {
 
     const calculatedChecksum = generateZaakpayChecksum(response, secretKey);
 
-    if (receivedChecksum === calculatedChecksum) {
-      console.log("✅ Checksum verified successfully");
-
-      if (response.responseCode === "100") {
-        console.log("🎉 Payment Successful for Order:", response.orderId);
-        return res.send(`<h3>Payment Successful for Order: ${response.orderId}</h3>`);
-      } else {
-        console.log("❌ Payment Failed for Order:", response.orderId);
-        return res.send(`<h3>Payment Failed for Order: ${response.orderId}</h3>`);
-      }
-    } else {
-      console.log("❌ Invalid checksum received in callback");
+    if (receivedChecksum !== calculatedChecksum) {
+      console.log("❌ Invalid checksum received");
       return res.status(400).send("Invalid checksum received.");
     }
+
+    console.log("✅ Checksum verified successfully");
+
+    const success = response.responseCode === "100";
+    const statusMessage = success ? "Payment Successful" : "Payment Failed";
+
+    // ✅ Option 1: Directly show HTML message
+    return res.send(`
+      <html>
+        <head>
+          <title>${statusMessage}</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              text-align: center;
+              padding-top: 100px;
+            }
+            .success { color: green; }
+            .failed { color: red; }
+          </style>
+        </head>
+        <body>
+          <h2 class="${success ? "success" : "failed"}">${statusMessage}</h2>
+          <p>Order ID: ${response.orderId}</p>
+          <p>Transaction ID: ${response.zaakpayTransactionId || "N/A"}</p>
+          <p>Response Code: ${response.responseCode}</p>
+          <br />
+          <a href="https://jajamblockprints.com">Go back to Website</a>
+        </body>
+      </html>
+    `);
+
+    // ✅ Option 2: (Better UX) Redirect to your frontend page
+    // res.redirect(
+    //   `https://jajamblockprints.com/payment-status?status=${success ? "success" : "failed"}&orderId=${response.orderId}`
+    // );
+
   } catch (error) {
     console.error("Callback Error:", error);
     res.status(500).send("Internal Server Error in Callback");
   }
 };
+
