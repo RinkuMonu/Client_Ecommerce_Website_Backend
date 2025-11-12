@@ -1,51 +1,88 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Redirecting to Zaakpay...</title>
-  <style>
-    body {
-      font-family: "Segoe UI", Arial, sans-serif;
-      text-align: center;
-      background-color: #fafafa;
-      padding-top: 100px;
-    }
-    .loader {
-      margin: 30px auto;
-      border: 4px solid #ccc;
-      border-top: 4px solid #007bff;
-      border-radius: 50%;
-      width: 40px;
-      height: 40px;
-      animation: spin 1s linear infinite;
-    }
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JAJAM BLOCK PRINTS - Redirecting to Zaakpay...</title>
+
+    <!-- Existing assets -->
+    <script type="module" crossorigin src="/assets/index-InYscd7y.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-ZNLVdySl.css" />
+
+    <style>
+      body {
+        font-family: "Segoe UI", Arial, sans-serif;
+        text-align: center;
+        background-color: #fafafa;
+        padding-top: 100px;
       }
-    }
-  </style>
-</head>
+      .loader {
+        margin: 30px auto;
+        border: 4px solid #ccc;
+        border-top: 4px solid #007bff;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      h2 {
+        margin-bottom: 10px;
+      }
+      p {
+        color: #555;
+      }
+    </style>
+  </head>
 
-<body onload="document.forms['zaakpayForm'].submit();">
-  <h2>Redirecting to Payment Gateway...</h2>
-  <p>Please wait while we securely process your payment.</p>
-  <div class="loader"></div>
+  <body onload="document.forms['zaakpayForm'].submit();">
+    <div id="root">
+      <h2>Redirecting to Payment Gateway...</h2>
+      <p>Please wait while we securely process your payment.</p>
+      <div class="loader"></div>
 
-  <form
-    name="zaakpayForm"
-    method="POST"
-    action="https://api.zaakpay.com/api/paymentTransact/V8"
-  >
-    <input type="hidden" name="amount" value="200" />
-    <input type="hidden" name="buyerEmail" value="test@example.com" />
-    <input type="hidden" name="currency" value="INR" />
-    <input type="hidden" name="merchantIdentifier" value="236e6378d80e492f95283a119417ef01" />
-    <input type="hidden" name="orderId" value="ZAAK176292866672708279866" />
-    <input type="hidden" name="productDescription" value="Test Transaction" />
-    <input type="hidden" name="returnUrl" value="https://jajamblockprints.com/api/zaakpay/callback" />
-    <input type="hidden" name="checksum" value="4da10e2a6c10a89588a73c9c7240ac641bd95db5b2ef68119c1fded1d481f16b" />
-  </form>
-</body>
+      <form
+        name="zaakpayForm"
+        method="POST"
+        action="https://api.zaakpay.com/api/paymentTransact/V8"
+      >
+        <input type="hidden" name="amount" value="200" />
+        <input type="hidden" name="buyerEmail" value="test@example.com" />
+        <input type="hidden" name="currency" value="INR" />
+        <input
+          type="hidden"
+          name="merchantIdentifier"
+          value="236e6378d80e492f95283a119417ef01"
+        />
+        <input
+          type="hidden"
+          name="orderId"
+          value="ZAAK176292866672708279866"
+        />
+        <input
+          type="hidden"
+          name="productDescription"
+          value="Test Transaction"
+        />
+        <input
+          type="hidden"
+          name="returnUrl"
+          value="https://jajamblockprints.com/api/zaakpay/callback"
+        />
+        <input
+          type="hidden"
+          name="checksum"
+          value="4da10e2a6c10a89588a73c9c7240ac641bd95db5b2ef68119c1fded1d481f16b"
+        />
+      </form>
+    </div>
+
+    <!-- Razorpay script (kept from your original setup if needed elsewhere) -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  </body>
 </html>

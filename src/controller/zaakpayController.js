@@ -129,8 +129,9 @@ const generateZaakpayChecksum = (data, key) => {
 
 // ✅ Generate unique order ID every time
 const generateUniqueOrderId = () => {
-  const randomPart = crypto.randomBytes(4).toString("hex").toUpperCase(); // 8-char random string
-  return `ZAAK${Date.now()}${randomPart}`;
+  const now = Date.now().toString().slice(-8); // 8 digits
+  const rand = crypto.randomBytes(3).toString("hex").toUpperCase(); // 6 chars
+  return `ZAAK${now}${rand}`; // 18–20 chars safe
 };
 
 // ✅ Step 1: Initiate Payment
