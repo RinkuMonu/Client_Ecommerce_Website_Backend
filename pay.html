@@ -1,45 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Zaakpay Payment Redirect</title>
-  </head>
-  <body onload="document.forms[0].submit()">
-    <h2>Redirecting to Zaakpay… Please wait</h2>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Redirecting to Zaakpay...</title>
+</head>
+<body onload="document.forms['zaakpayForm'].submit();">
+  <h3>Redirecting to Payment Gateway, please wait...</h3>
 
-    <form method="POST" action="https://api.zaakpay.com/api/paymentTransact/V8">
-      <input type="hidden" name="amount" value="200" />
-      <input type="hidden" name="buyerEmail" value="test@example.com" />
-      <input type="hidden" name="currency" value="INR" />
-      <input
-        type="hidden"
-        name="merchantIdentifier"
-        value="236e6378d80e492f95283a119417ef01"
-      />
-      <input
-        type="hidden"
-        name="orderId"
-        value="ZAAK1762864199118"
-      />
-      <input
-        type="hidden"
-        name="productDescription"
-        value="Test Transaction"
-      />
-      <input
-        type="hidden"
-        name="returnUrl"
-        value="https://jajamblockprints.com/api/callback"
-      />
-      <input
-        type="hidden"
-        name="checksum"
-        value="3de6da72516a56a2d523a098d9a041a5d920b0c1db6bce427e1fe11105de1f2e"
-      />
-      <noscript>
-        <p>JavaScript is disabled. Please click the button below to proceed.</p>
-        <button type="submit">Proceed to Payment</button>
-      </noscript>
-    </form>
-  </body>
+  <form
+    name="zaakpayForm"
+    method="POST"
+    action="https://api.zaakpay.com/api/paymentTransact/V8"
+  >
+    <input type="hidden" name="amount" value="200" />
+    <input type="hidden" name="buyerEmail" value="test@example.com" />
+    <input type="hidden" name="currency" value="INR" />
+    <input type="hidden" name="merchantIdentifier" value="236e6378d80e492f95283a119417ef01" />
+    <input type="hidden" name="orderId" value="ZAAK176292866672708279866" />
+    <input type="hidden" name="productDescription" value="Test Transaction" />
+    <input type="hidden" name="returnUrl" value="https://jajamblockprints.com/api/zaakpay/callback" />
+    <input type="hidden" name="checksum" value="4da10e2a6c10a89588a73c9c7240ac641bd95db5b2ef68119c1fded1d481f16b" />
+  </form>
+</body>
 </html>
