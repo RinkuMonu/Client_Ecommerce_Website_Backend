@@ -113,7 +113,8 @@ export const zaakpayPayin = async (req, res) => {
       merchantIdentifier: merchantId,
       orderId,
 
-      returnUrl: `https://jajamblockprints.com/api/zaakpay/callback?userId=${userId}`,
+      // returnUrl: `https://jajamblockprints.com/api/zaakpay/callback?userId=${userId}`,
+      returnUrl: `https://api.jajamblockprints.com/api/zaakpay/callback?userId=${userId}`,
       // returnUrl: `http://localhost:5007/api/zaakpay/callback?userId=${userId}`
     };
 
