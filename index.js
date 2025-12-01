@@ -62,8 +62,8 @@ app.use(
       "https://spiral.fashion",
       "https://www.spiral.fashion",
       "https://qubitnexts.com/",
-      "https://khushalkingdom.com"<
-      "http://madanlaltrading.com/"
+      "https://khushalkingdom.com",
+      "http://madanlaltrading.com"
 
 
       
