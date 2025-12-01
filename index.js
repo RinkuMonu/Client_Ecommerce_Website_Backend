@@ -64,6 +64,9 @@ app.use(
       "https://qubitnexts.com/",
       "https://khushalkingdom.com"<
       "http://madanlaltrading.com/"
+
+
+      
     ], // allow specific frontend domains
 
     credentials: true, // allow cookies and headers like Authorization
