@@ -63,7 +63,8 @@ app.use(
       "https://www.spiral.fashion",
       "https://qubitnexts.com/",
       "https://khushalkingdom.com",
-      "https://madanlaltrading.com"      
+      "https://madanlaltrading.com",
+      "https://tinkukingdom.in"   
     ], // allow specific frontend domains
 
     credentials: true, // allow cookies and headers like Authorization
